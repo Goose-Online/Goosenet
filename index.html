@@ -225,6 +225,53 @@ function renderSiteCard(site, currentUser, isPending = false) {
             const map = { swamp: '🦢 Болото', tech: '🌀 Техно', art: '🎨 Искусство' };
             return map[code] || code;
         }
+
+        // Проверка, является ли пользователь модератором
+async function isModerator(userId) {
+    // Простая проверка - можно сделать через таблицу moderators
+    // Пока проверяем по email (для старта)
+    const { data: { user } } = await supabase.auth.getUser();
+    const adminEmails = ['ваш-email@gmail.com']; // Добавьте сюда админов
+    window.isCurrentUserModerator = adminEmails.includes(user?.email);
+    return window.isCurrentUserModerator;
+}
+
+// Удаление сайта
+async function deleteSite(siteId) {
+    if (!confirm('Удалить сайт из каталога? Это действие нельзя отменить.')) return;
+    
+    const { error } = await supabase
+        .from('sites')
+        .delete()
+        .eq('id', siteId);
+    
+    if (error) {
+        alert('Ошибка удаления: ' + error.message);
+    } else {
+        alert('Сайт удалён');
+        loadSites();
+    }
+}
+
+// Модерация сайта
+async function moderateSite(siteId, action) {
+    const status = action === 'approved' ? 'approved' : 'rejected';
+    const message = action === 'approved' ? 'одобрен' : 'отклонён';
+    
+    if (!confirm(`Вы уверены, что хотите ${message} этот сайт?`)) return;
+    
+    const { error } = await supabase
+        .from('sites')
+        .update({ status: status })
+        .eq('id', siteId);
+    
+    if (error) {
+        alert('Ошибка модерации: ' + error.message);
+    } else {
+        alert(`Сайт ${message}`);
+        loadSites();
+    }
+}
         
         // Проверяем авторизацию при загрузке
         checkAuth();
