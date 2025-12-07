@@ -106,33 +106,93 @@ async function signup() {
         }
         
         // Загружаем список сайтов
-        async function loadSites() {
-            const { data: sites, error } = await supabase
-                .from('sites')
-                .select('*')
-                .eq('verified', true);
+        // Загружаем список сайтов
+async function loadSites() {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: sites, error } = await supabase
+        .from('sites')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
+    if (error) {
+        console.error(error);
+        document.getElementById('sites-list').innerHTML = '<p>Ошибка загрузки</p>';
+        return;
+    }
+    
+    const container = document.getElementById('sites-list');
+    
+    if (sites.length === 0) {
+        container.innerHTML = '<p>Пока нет сайтов. Будь первым!</p>';
+        return;
+    }
+    
+    // Группируем по статусу
+    const pendingSites = sites.filter(s => s.status === 'pending');
+    const approvedSites = sites.filter(s => s.status === 'approved');
+    const rejectedSites = sites.filter(s => s.status === 'rejected');
+    
+    let html = '';
+    
+    // Только модераторы видят ожидающие сайты
+    if (user && (await isModerator(user.id)) && pendingSites.length > 0) {
+        html += `<h3>⏳ Ожидают модерации (${pendingSites.length})</h3>`;
+        html += pendingSites.map(site => renderSiteCard(site, user, true)).join('');
+    }
+    
+    // Одобренные сайты видят все
+    html += `<h3>✅ Одобренные сайты (${approvedSites.length})</h3>`;
+    html += approvedSites.map(site => renderSiteCard(site, user, false)).join('');
+    
+    // Отклонённые видят только владельцы и модераторы
+    if (user && rejectedSites.filter(s => s.user_id === user.id).length > 0) {
+        html += `<h3>❌ Отклонённые (только ваши)</h3>`;
+        html += rejectedSites
+            .filter(s => s.user_id === user.id)
+            .map(site => renderSiteCard(site, user, false))
+            .join('');
+    }
+    
+    container.innerHTML = html || '<p>Пока нет сайтов</p>';
+}
+
+// Рендерим карточку сайта
+function renderSiteCard(site, currentUser, isPending = false) {
+    const isOwner = currentUser && site.user_id === currentUser.id;
+    const isMod = currentUser && window.isCurrentUserModerator;
+    
+    let statusBadge = '';
+    if (site.status === 'pending') statusBadge = '<span class="status-pending">⏳ На модерации</span>';
+    if (site.status === 'rejected') statusBadge = '<span class="status-rejected">❌ Отклонён</span>';
+    
+    return `
+        <div class="site-card" data-site-id="${site.id}">
+            <div class="site-header">
+                <span class="biom biom-${site.category}">${getBiomName(site.category)}</span>
+                ${statusBadge}
+                ${isOwner ? '<span class="owner-badge">✨ Ваш сайт</span>' : ''}
+            </div>
+            <h3><a href="${site.url}" target="_blank">${site.title}</a></h3>
+            <p>${site.description || 'Без описания'}</p>
+            <p class="site-meta">Добавлен: ${new Date(site.created_at).toLocaleDateString()}</p>
             
-            if (error) {
-                console.error(error);
-                return;
-            }
-            
-            const container = document.getElementById('sites-list');
-            container.innerHTML = '<p>Загружаем угодья...</p>';
-            
-            if (sites.length === 0) {
-                container.innerHTML = '<p>Пока нет сайтов. Будь первым!</p>';
-                return;
-            }
-            
-            container.innerHTML = sites.map(site => `
-                <div class="site-card">
-                    <span class="biom biom-${site.category}">${getBiomName(site.category)}</span>
-                    <h3><a href="${site.url}" target="_blank">${site.title}</a></h3>
-                    <p>${site.description || 'Без описания'}</p>
-                </div>
-            `).join('');
-        }
+            <div class="site-actions">
+                ${isOwner || isMod ? `
+                    <button onclick="deleteSite('${site.id}')" class="btn-delete">🗑️ Удалить</button>
+                ` : ''}
+                
+                ${isPending && isMod ? `
+                    <button onclick="moderateSite('${site.id}', 'approved')" class="btn-approve">✅ Одобрить</button>
+                    <button onclick="moderateSite('${site.id}', 'rejected')" class="btn-reject">❌ Отклонить</button>
+                ` : ''}
+                
+                ${site.status === 'rejected' && isMod ? `
+                    <button onclick="moderateSite('${site.id}', 'approved')" class="btn-approve">✅ Восстановить</button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
         
         // Добавление сайта
         async function addSite() {
