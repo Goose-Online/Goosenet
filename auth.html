@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Гусиный Интернет - Авторизация</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <p>Обработка авторизации...</p>
+    
+    <script>
+        // Инициализация Supabase (ТЕ ЖЕ КЛЮЧИ, ЧТО В index.html!)
+        const supabaseUrl = 'https://uvhtwedzxejuwiaofavk.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aHR3ZWR6eGVqdXdpYW9mYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDA3MjgsImV4cCI6MjA4MDcxNjcyOH0.9l4Xlj4CwRJS9Q3cT-pK9udW25-ptewrozUDbLgTjUM';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // Обработка токена из URL
+        async function handleAuth() {
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            const access_token = params.get('access_token');
+            const refresh_token = params.get('refresh_token');
+            const error = params.get('error');
+            
+            if (error) {
+                document.body.innerHTML = `<p>Ошибка: ${error}</p>`;
+                return;
+            }
+            
+            if (access_token && refresh_token) {
+                // Устанавливаем сессию
+                const { error } = await supabase.auth.setSession({
+                    access_token,
+                    refresh_token
+                });
+                
+                if (error) {
+                    document.body.innerHTML = `<p>Ошибка сессии: ${error.message}</p>`;
+                } else {
+                    // Успешно! Перенаправляем на главную
+                    window.location.href = '/';
+                }
+            } else {
+                // Нет токенов, просто редирект
+                window.location.href = '/';
+            }
+        }
+        
+        handleAuth();
+    </script>
+</body>
+</html>
