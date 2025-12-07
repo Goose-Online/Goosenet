@@ -335,12 +335,46 @@ function renderSiteCard(site, currentUser, isPending = false) {
 
         // Проверка, является ли пользователь модератором
 async function isModerator(userId) {
-    // Простая проверка - можно сделать через таблицу moderators
-    // Пока проверяем по email (для старта)
-    const { data: { user } } = await supabase.auth.getUser();
-    const adminEmails = ['ваш-email@gmail.com']; // Добавьте сюда админов
-    window.isCurrentUserModerator = adminEmails.includes(user?.email);
-    return window.isCurrentUserModerator;
+    if (!userId) return false;
+    
+    // Проверяем кэш, чтобы не делать лишние запросы
+    if (window.moderatorCache && window.moderatorCache[userId] !== undefined) {
+        return window.moderatorCache[userId];
+    }
+    
+    try {
+        // Проверяем наличие в таблице moderators
+        const { data, error, count } = await supabase
+            .from('moderators')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+        
+        if (error) {
+            console.error('Ошибка проверки модератора:', error);
+            return false;
+        }
+        
+        const isMod = count > 0;
+        
+        // Кэшируем результат (на 5 минут)
+        if (!window.moderatorCache) window.moderatorCache = {};
+        window.moderatorCache[userId] = isMod;
+        
+        // Очищаем кэш через 5 минут
+        setTimeout(() => {
+            if (window.moderatorCache) {
+                delete window.moderatorCache[userId];
+            }
+        }, 5 * 60 * 1000);
+        
+        // Сохраняем глобально для быстрого доступа
+        window.isCurrentUserModerator = isMod;
+        
+        return isMod;
+    } catch (error) {
+        console.error('Исключение в isModerator:', error);
+        return false;
+    }
 }
 
 // Удаление сайта
