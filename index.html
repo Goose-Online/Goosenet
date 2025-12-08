@@ -193,20 +193,38 @@ async function signup() {
         // Загружаем список сайтов
 async function loadSites() {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: sites, error } = await supabase
+    let userIsModerator = false;
+    
+    if (user) {
+        userIsModerator = await isModerator(user.id);
+        window.isCurrentUserModerator = userIsModerator;
+    }
+    
+    // Загружаем сайты в зависимости от прав
+    let query = supabase
         .from('sites')
         .select('*')
         .order('created_at', { ascending: false });
     
+    // Если не модератор - показываем только approved или свои
+    if (!userIsModerator && user) {
+        query = query.or(`status.eq.approved,user_id.eq.${user.id}`);
+    } else if (!userIsModerator && !user) {
+        query = query.eq('status', 'approved'); // Гости видят только approved
+    }
+    // Модераторы видят всё (запрос без фильтров)
+    
+    const { data: sites, error } = await query;
+    
     if (error) {
-        console.error(error);
+        console.error('Ошибка загрузки сайтов:', error);
         document.getElementById('sites-list').innerHTML = '<p>Ошибка загрузки</p>';
         return;
     }
     
     const container = document.getElementById('sites-list');
     
-    if (sites.length === 0) {
+    if (!sites || sites.length === 0) {
         container.innerHTML = '<p>Пока нет сайтов. Будь первым!</p>';
         return;
     }
@@ -219,14 +237,16 @@ async function loadSites() {
     let html = '';
     
     // Только модераторы видят ожидающие сайты
-    if (user && (await isModerator(user.id)) && pendingSites.length > 0) {
+    if (userIsModerator && pendingSites.length > 0) {
         html += `<h3>⏳ Ожидают модерации (${pendingSites.length})</h3>`;
         html += pendingSites.map(site => renderSiteCard(site, user, true)).join('');
     }
     
     // Одобренные сайты видят все
-    html += `<h3>✅ Одобренные сайты (${approvedSites.length})</h3>`;
-    html += approvedSites.map(site => renderSiteCard(site, user, false)).join('');
+    if (approvedSites.length > 0) {
+        html += `<h3>✅ Одобренные сайты (${approvedSites.length})</h3>`;
+        html += approvedSites.map(site => renderSiteCard(site, user, false)).join('');
+    }
     
     // Отклонённые видят только владельцы и модераторы
     if (user && rejectedSites.filter(s => s.user_id === user.id).length > 0) {
@@ -237,17 +257,34 @@ async function loadSites() {
             .join('');
     }
     
+    // Модераторы видят все отклонённые
+    if (userIsModerator && rejectedSites.length > 0 && (!user || rejectedSites.some(s => s.user_id !== user.id))) {
+        const otherRejected = rejectedSites.filter(s => !user || s.user_id !== user.id);
+        if (otherRejected.length > 0) {
+            html += `<h3>❌ Отклонённые (другие пользователи)</h3>`;
+            html += otherRejected.map(site => renderSiteCard(site, user, false)).join('');
+        }
+    }
+    
     container.innerHTML = html || '<p>Пока нет сайтов</p>';
 }
 
 // Рендерим карточку сайта
 function renderSiteCard(site, currentUser, isPending = false) {
     const isOwner = currentUser && site.user_id === currentUser.id;
-    const isMod = currentUser && window.isCurrentUserModerator;
+    const isMod = window.isCurrentUserModerator;
     
     let statusBadge = '';
-    if (site.status === 'pending') statusBadge = '<span class="status-pending">⏳ На модерации</span>';
-    if (site.status === 'rejected') statusBadge = '<span class="status-rejected">❌ Отклонён</span>';
+    if (site.status === 'pending') {
+        statusBadge = '<span class="status-pending">⏳ На модерации</span>';
+    } else if (site.status === 'rejected') {
+        statusBadge = '<span class="status-rejected">❌ Отклонён</span>';
+    }
+    
+    // Гости не видят статусы pending и rejected (кроме своих)
+    if (!currentUser && site.status !== 'approved') {
+        return ''; // Не показываем гостям
+    }
     
     return `
         <div class="site-card" data-site-id="${site.id}">
