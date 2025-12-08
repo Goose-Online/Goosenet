@@ -365,9 +365,13 @@
     <script src="https://goosenet-widget.vercel.app/widget.js"></script>
 
     <script>
+        // Конфигурация
+        const SUPABASE_URL = 'https://uvhtwedzxejuwiaofavk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aHR3ZWR6eGVqdXdpYW9mYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDA3MjgsImV4cCI6MjA4MDcxNjcyOH0.9l4Xlj4CwRJS9Q3cT-pK9udW25-ptewrozUDbLgTjUM';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         // Гусиные функции для интеграции
         function gooseSendMessage() {
-            if (window.supabase && window.supabase.auth.getSession()) {
+            if (window.supabase && supabase.auth.getSession()) {
                 alert('Форма сообщения откроется в хабе Гуснета!');
                 window.open('https://goosenet-one.vercel.app/messages', '_blank');
             } else {
@@ -398,7 +402,7 @@
             
             // Проверяем, авторизован ли пользователь через Гуснет
             if (window.supabase) {
-                window.supabase.auth.getSession().then(({ data: { session } }) => {
+                supabase.auth.getSession().then(({ data: { session } }) => {
                     if (session) {
                         console.log('🦢 Пользователь Гуснета на сайте:', session.user.email);
                         // Можно показать приветствие и т.д.
