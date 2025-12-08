@@ -678,7 +678,7 @@
                     </div>
                     <div>${formatDate(site.created_at)}</div>
                     <div class="action-buttons">
-                        ${site.status === 'pending' || site.status === 'rejected' ? `
+                        ${site.status === 'approved' || site.status === 'rejected' ? `
                             <button class="action-btn btn-edit" onclick="editSite('${site.id}')">
                                 ✏️
                             </button>
