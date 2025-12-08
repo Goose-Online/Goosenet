@@ -725,6 +725,7 @@
     <div class="notification" id="notification"></div>
 
     <script>
+        let allUsersCache = [];
         // Конфигурация
         const SUPABASE_URL = 'https://uvhtwedzxejuwiaofavk.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_RTe0sxIDojnUERwG1tWEDw_eE4O4004';
@@ -1239,146 +1240,130 @@
         // ОСНОВНАЯ РАБОЧАЯ ФУНКЦИЯ
 async function loadUsers() {
     try {
-        // Пытаемся получить пользователей через auth API
-        let users = [];
+        // 1. Получаем все сайты
+        const { data: allSites, error: sitesError } = await supabase
+            .from('sites')
+            .select('*')
+            .order('created_at', { ascending: false });
         
-        // Создаем клиента с текущей сессией
-        const { data: { session } } = await supabase.auth.getSession();
+        if (sitesError) throw sitesError;
         
-        if (session) {
-            // Пробуем получить пользователей через REST API
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
-                method: 'GET',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+        // 2. Если нет сайтов - показываем заглушку
+        if (!allSites || allSites.length === 0) {
+            showNoUsers();
+            return;
+        }
+        
+        // 3. Группируем пользователей
+        const usersMap = {};
+        allSites.forEach(site => {
+            const userId = site.user_id;
             
-            if (response.ok) {
-                users = await response.json();
+            if (!usersMap[userId]) {
+                usersMap[userId] = {
+                    id: userId,
+                    email: `user_${userId.substring(0, 6)}`, // Фиктивный email
+                    sites: [],
+                    totalSites: 0,
+                    approved: 0,
+                    pending: 0,
+                    rejected: 0,
+                    lastActivity: site.created_at
+                };
             }
-        }
+            
+            usersMap[userId].sites.push(site);
+            usersMap[userId].totalSites++;
+            
+            if (site.status === 'approved') usersMap[userId].approved++;
+            else if (site.status === 'pending') usersMap[userId].pending++;
+            else if (site.status === 'rejected') usersMap[userId].rejected++;
+            
+            // Обновляем последнюю активность
+            const siteDate = new Date(site.created_at);
+            const userDate = new Date(usersMap[userId].lastActivity);
+            if (siteDate > userDate) {
+                usersMap[userId].lastActivity = site.created_at;
+            }
+        });
         
-        // Если не получилось, используем fallback
-        if (users.length === 0) {
-            users = await getUsersFallback();
-        }
+        // 4. Сохраняем в кэш
+        allUsersCache = Object.values(usersMap);
         
-        // Отображаем пользователей
-        displayUsers(users);
+        // 5. Получаем модераторов
+        const { data: moderators } = await supabase
+            .from('moderators')
+            .select('user_id, level')
+            .catch(() => ({ data: [] }));
+        
+        // 6. Отображаем
+        displayUsersList(allUsersCache, moderators || []);
         
     } catch (error) {
-        console.error('Ошибка загрузки пользователей:', error);
-        // Всегда показываем хоть что-то
-        showFallbackUsers();
+        console.log('Ошибка, показываем демо:', error);
+        showDemoUsers();
     }
 }
 
-// Fallback через таблицу sites
-async function getUsersFallback() {
-    const { data: sites } = await supabase
-        .from('sites')
-        .select('user_id, created_at')
-        .order('created_at', { ascending: false })
-        .limit(50);
-    
-    if (!sites) return [];
-    
-    // Группируем по пользователям
-    const userMap = {};
-    sites.forEach(site => {
-        if (!userMap[site.user_id]) {
-            userMap[site.user_id] = {
-                id: site.user_id,
-                email: `user_${site.user_id.substring(0, 8)}@example.com`,
-                sites: 0,
-                last_activity: site.created_at
-            };
-        }
-        userMap[site.user_id].sites++;
-    });
-    
-    return Object.values(userMap);
-}
-
-// Отображение пользователей
-async function displayUsers(users) {
+function displayUsersList(users, moderators) {
     const container = document.getElementById('users-list');
     
-    if (users.length === 0) {
-        container.innerHTML = `
-            <div class="table-row" style="text-align: center; padding: 2rem;">
-                <div style="color: #666;">
-                    👥 Добавьте первые сайты через главную страницу,<br>
-                    и пользователи появятся здесь автоматически.
-                </div>
-            </div>
-        `;
-        return;
-    }
-    
-    // Получаем модераторов
-    const { data: moderators } = await supabase
-        .from('moderators')
-        .select('user_id, level');
+    // Сортируем по количеству сайтов
+    users.sort((a, b) => b.totalSites - a.totalSites);
     
     const moderatorMap = {};
-    if (moderators) {
-        moderators.forEach(m => moderatorMap[m.user_id] = m.level);
-    }
+    moderators.forEach(m => {
+        moderatorMap[m.user_id] = m.level;
+    });
     
     container.innerHTML = users.map(user => {
         const isModerator = !!moderatorMap[user.id];
         const isAdmin = moderatorMap[user.id] === 'admin';
-        const isCurrentUser = user.id === currentUser?.id;
+        const isCurrentUser = currentUser && user.id === currentUser.id;
+        
+        // Создаем красивый ник на основе ID
+        const nickname = `Гусь-${user.id.substring(2, 6).toUpperCase()}`;
         
         return `
             <div class="table-row">
                 <div>
-                    <div style="font-weight: bold;">
-                        ${user.email || `Пользователь ${user.id.substring(0, 8)}`}
-                    </div>
+                    <div style="font-weight: bold;">${nickname}</div>
                     <div style="font-size: 0.8rem; color: #666;">
-                        ${user.id.substring(0, 12)}...
+                        ${user.email} • ID: ${user.id.substring(0, 8)}...
                     </div>
                 </div>
                 <div>
-                    <div style="font-weight: bold; font-size: 1.2rem;">
-                        ${user.sites || 0}
+                    <div style="font-weight: bold; font-size: 1.2rem;">${user.totalSites}</div>
+                    <div style="font-size: 0.8rem; color: #666;">
+                        ✅${user.approved} ⏳${user.pending} ❌${user.rejected}
                     </div>
-                    <div style="font-size: 0.8rem; color: #666;">сайтов</div>
                 </div>
                 <div>
                     ${isModerator ? 
-                        `<span style="color: ${isAdmin ? '#d4af37' : 'var(--goose-green)'}; 
-                              font-weight: bold;">
+                        `<span style="color: ${isAdmin ? '#d4af37' : 'var(--goose-green)'}; font-weight: bold;">
                             ${isAdmin ? '👑 Админ' : '🛡️ Модератор'}
                         </span>` : 
-                        '👤 Пользователь'
+                        '<span style="color: #666;">👤 Пользователь</span>'
                     }
                 </div>
-                <div>
-                    ${user.last_activity ? formatDate(user.last_activity) : 'Недавно'}
-                </div>
+                <div>${formatDate(user.lastActivity)}</div>
                 <div class="action-buttons">
-                    <button class="action-btn" 
-                            onclick="viewUserSites('${user.id}')"
-                            style="background: var(--goose-blue); color: white;">
+                    <button class="action-btn" onclick="viewUserDetails('${user.id}')"
+                            style="background: var(--goose-blue); color: white;"
+                            title="Посмотреть детали">
                         👁️
                     </button>
                     ${!isCurrentUser && !isModerator ? `
-                        <button class="action-btn" 
-                                onclick="addAsModerator('${user.id}')"
-                                style="background: var(--goose-green); color: white;">
+                        <button class="action-btn" onclick="makeUserModerator('${user.id}')"
+                                style="background: var(--goose-green); color: white;"
+                                title="Сделать модератором">
                             🛡️
                         </button>
                     ` : ''}
                     ${!isCurrentUser && isModerator ? `
-                        <button class="action-btn" 
-                                onclick="removeModerator('${user.id}')"
-                                style="background: var(--goose-red); color: white;">
+                        <button class="action-btn" onclick="removeUserModerator('${user.id}')"
+                                style="background: var(--goose-red); color: white;"
+                                title="Убрать права">
                             ❌
                         </button>
                     ` : ''}
@@ -1388,13 +1373,140 @@ async function displayUsers(users) {
     }).join('');
 }
 
-// Показываем fallback если все сломалось
-function showFallbackUsers() {
+
+
+
+
+async function viewUserDetails(userId) {
+    const user = allUsersCache.find(u => u.id === userId);
+    if (!user) return;
+    
+    // Показываем модалку
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h2 class="modal-title">👤 Детали пользователя</h2>
+            <div style="margin-bottom: 1.5rem;">
+                <div><strong>ID:</strong> ${user.id}</div>
+                <div><strong>Ник:</strong> Гусь-${user.id.substring(2, 6).toUpperCase()}</div>
+                <div><strong>Всего сайтов:</strong> ${user.totalSites}</div>
+                <div><strong>Статистика:</strong> ✅${user.approved} ⏳${user.pending} ❌${user.rejected}</div>
+                <div><strong>Последняя активность:</strong> ${formatDate(user.lastActivity)}</div>
+            </div>
+            
+            <h3 style="color: var(--goose-brown); margin-bottom: 10px;">Сайты пользователя:</h3>
+            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem;">
+                ${user.sites.map(site => `
+                    <div style="border: 1px solid #eee; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
+                        <div style="font-weight: bold;">${site.title || 'Без названия'}</div>
+                        <div style="font-size: 0.9rem; color: #666;">
+                            ${getBiomName(site.category)} • ${getStatusName(site.status)}
+                        </div>
+                        <div style="font-size: 0.8rem; margin-top: 5px;">
+                            <a href="${site.url}" target="_blank" style="color: var(--goose-blue);">
+                                ${site.url}
+                            </a>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #888; margin-top: 3px;">
+                            ${formatDate(site.created_at)}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="this.closest('.modal').remove()">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Функции управления модераторами
+async function makeUserModerator(userId) {
+    const user = allUsersCache.find(u => u.id === userId);
+    if (!user) return;
+    
+    const nickname = `Гусь-${user.id.substring(2, 6).toUpperCase()}`;
+    
+    if (confirm(`Сделать ${nickname} модератором?`)) {
+        try {
+            const { error } = await supabase
+                .from('moderators')
+                .insert([{
+                    user_id: userId,
+                    level: 'moderator',
+                    added_by: currentUser.id,
+                    added_at: new Date().toISOString(),
+                    notes: `Добавлен ${new Date().toLocaleDateString('ru-RU')}`
+                }]);
+            
+            if (error) throw error;
+            
+            showNotification(`${nickname} теперь модератор`, 'success');
+            await loadUsers(); // Обновляем список
+            
+        } catch (error) {
+            console.error('Ошибка:', error);
+            showNotification('Ошибка добавления модератора', 'error');
+        }
+    }
+}
+
+async function removeUserModerator(userId) {
+    const user = allUsersCache.find(u => u.id === userId);
+    if (!user) return;
+    
+    const nickname = `Гусь-${user.id.substring(2, 6).toUpperCase()}`;
+    
+    if (confirm(`Убрать права модератора у ${nickname}?`)) {
+        try {
+            const { error } = await supabase
+                .from('moderators')
+                .delete()
+                .eq('user_id', userId);
+            
+            if (error) throw error;
+            
+            showNotification(`Права убраны у ${nickname}`, 'success');
+            await loadUsers(); // Обновляем список
+            
+        } catch (error) {
+            console.error('Ошибка:', error);
+            showNotification('Ошибка удаления модератора', 'error');
+        }
+    }
+}
+
+// Заглушки
+function showNoUsers() {
+    document.getElementById('users-list').innerHTML = `
+        <div class="table-row" style="text-align: center; padding: 3rem;">
+            <div>
+                <div style="color: #666; margin-bottom: 15px;">
+                    👥 Пользователи не найдены
+                </div>
+                <div style="font-size: 0.9rem; color: #888;">
+                    Когда пользователи добавят сайты, они появятся здесь
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function showDemoUsers() {
     document.getElementById('users-list').innerHTML = `
         <div class="table-row">
             <div>
                 <div style="font-weight: bold;">👑 Вы (администратор)</div>
-                <div style="font-size: 0.8rem; color: #666;">${currentUser?.email || 'Текущий пользователь'}</div>
+                <div style="font-size: 0.8rem; color: #666;">
+                    ${currentUser?.email || 'Текущий пользователь'}
+                </div>
             </div>
             <div>
                 <div style="font-weight: bold;">∞</div>
@@ -1412,12 +1524,12 @@ function showFallbackUsers() {
         </div>
         <div class="table-row">
             <div>
-                <div style="font-weight: bold;">🦢 Гусь-модератор</div>
-                <div style="font-size: 0.8rem; color: #666;">moderator@goose.net</div>
+                <div style="font-weight: bold;">🦢 Гусь-А1В2</div>
+                <div style="font-size: 0.8rem; color: #666;">user_a1b2@goose.net</div>
             </div>
             <div>
                 <div style="font-weight: bold;">5</div>
-                <div style="font-size: 0.8rem; color: #666;">сайтов</div>
+                <div style="font-size: 0.8rem; color: #666;">✅3 ⏳1 ❌1</div>
             </div>
             <div>
                 <span style="color: var(--goose-green); font-weight: bold;">🛡️ Модератор</span>
@@ -1434,62 +1546,6 @@ function showFallbackUsers() {
         </div>
     `;
 }
-
-// Вспомогательные функции
-async function viewUserSites(userId) {
-    const { data: sites } = await supabase
-        .from('sites')
-        .select('*')
-        .eq('user_id', userId);
-    
-    if (!sites || sites.length === 0) {
-        alert('У этого пользователя нет сайтов');
-        return;
-    }
-    
-    const sitesList = sites.map(site => 
-        `• ${site.title} (${getStatusName(site.status)})\n  ${site.url}`
-    ).join('\n\n');
-    
-    alert(`Сайты пользователя:\n\n${sitesList}`);
-}
-
-async function addAsModerator(userId) {
-    if (confirm('Сделать этого пользователя модератором?')) {
-        const { error } = await supabase
-            .from('moderators')
-            .insert([{
-                user_id: userId,
-                level: 'moderator',
-                added_by: currentUser.id,
-                added_at: new Date().toISOString()
-            }]);
-        
-        if (error) {
-            showNotification('Ошибка: ' + error.message, 'error');
-        } else {
-            showNotification('Пользователь стал модератором', 'success');
-            loadUsers(); // Обновляем список
-        }
-    }
-}
-
-async function removeModerator(userId) {
-    if (confirm('Убрать права модератора?')) {
-        const { error } = await supabase
-            .from('moderators')
-            .delete()
-            .eq('user_id', userId);
-        
-        if (error) {
-            showNotification('Ошибка: ' + error.message, 'error');
-        } else {
-            showNotification('Права модератора убраны', 'success');
-            loadUsers(); // Обновляем список
-        }
-    }
-}
-
 
         
         async function toggleModerator(userId, userEmail, isCurrentlyModerator) {
