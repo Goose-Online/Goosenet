@@ -1280,18 +1280,18 @@
             }
         });
         
-        // Получаем модераторов
-        const { data: moderators } = await supabase
-            .from('moderators')
-            .select('user_id, level')
-            .catch(() => ({ data: [] }));
+        // // Получаем модераторов
+        // const { data: moderators } = await supabase
+        //     .from('moderators')
+        //     .select('user_id, level')
+        //     .catch(() => ({ data: [] }));
         
         const container = document.getElementById('users-list');
         const users = Object.values(userMap);
         
         container.innerHTML = users.map(user => {
-            const isModerator = moderators?.some(m => m.user_id === user.id);
-            const modLevel = moderators?.find(m => m.user_id === user.id)?.level;
+            const isModerator = false;//moderators?.some(m => m.user_id === user.id);
+            const modLevel = 0;//moderators?.find(m => m.user_id === user.id)?.level;
             
             return `
                 <div class="table-row">
@@ -1315,12 +1315,12 @@
                     </div>
                     <div>${formatDate(user.lastActivity)}</div>
                     <div class="action-buttons">
-                        <button class="action-btn" onclick="viewUserSitesDemo('${user.id}')"
+                        <button class="action-btn" onclick="viewUserSites('${user.id}')"
                                 style="background: var(--goose-blue); color: white;">
                             👁️
                         </button>
                         ${user.id !== currentUser.id ? `
-                            <button class="action-btn" onclick="toggleModeratorDemo('${user.id}', ${isModerator})"
+                            <button class="action-btn" onclick="toggleModerator('${user.id}', ${isModerator})"
                                     style="background: ${isModerator ? 'var(--goose-red)' : 'var(--goose-green)'}; 
                                            color: white;">
                                 ${isModerator ? '🗑️' : '🛡️'}
