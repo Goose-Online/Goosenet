@@ -1283,15 +1283,19 @@
         // // Получаем модераторов
         const { data: moderators } = await supabase
             .from('moderators')
-            .select('user_id, level')
-            .catch(() => ({ data: [] }));
+            .select('user_id, level');
+
+        const { data: emails } = await supabase
+            .from('users')
+            .select('email');
         
         const container = document.getElementById('users-list');
         const users = Object.values(userMap);
         
         container.innerHTML = users.map(user => {
-            const isModerator = false;//moderators?.some(m => m.user_id === user.id);
-            const modLevel = 0;//moderators?.find(m => m.user_id === user.id)?.level;
+            const isModerator = moderators?.some(m => m.user_id === user.id);
+            const modLevel = moderators?.find(m => m.user_id === user.id)?.level;
+            const email = emails?.find(m => m.user_id === user.id).email;
             
             return `
                 <div class="table-row">
