@@ -463,6 +463,7 @@ supabase.auth.getSession().then(({ data: { session } }) => {
         loadSites();
     }
 });
+        loadSites();
 
 // Слушаем изменения авторизации
 supabase.auth.onAuthStateChange((event, session) => {
