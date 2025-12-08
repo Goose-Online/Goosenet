@@ -883,23 +883,18 @@
         
         if (error) throw error;
         
-        // Получаем user_id из сайтов
-        const userIds = [...new Set(activities.map(site => site.user_id))];
+        const container = document.getElementById('recent-activity');
         
-        // Запрашиваем email через функцию (её создадим в БД)
-        const { data: usersData } = await supabase
-            .rpc('get_users_info', { user_ids: userIds })
-            .catch(() => ({ data: [] }));
-        
-        // Создаем маппинг userId -> email
-        const usersMap = {};
-        if (usersData) {
-            usersData.forEach(user => {
-                usersMap[user.id] = user.email;
-            });
+        if (!activities || activities.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #666; font-style: italic;">
+                    Активность не найдена
+                </div>
+            `;
+            return;
         }
         
-        const container = document.getElementById('recent-activity');
+        // Просто показываем без email пользователей (для начала)
         container.innerHTML = activities.map(site => `
             <div style="
                 padding: 10px;
@@ -911,7 +906,7 @@
                 <div>
                     <div style="font-weight: bold;">${site.title}</div>
                     <div style="font-size: 0.9rem; color: #666;">
-                        ${usersMap[site.user_id] || `Пользователь ${site.user_id.substring(0, 8)}...`} • 
+                        Пользователь ${site.user_id.substring(0, 8)}... • 
                         ${formatDate(site.created_at)}
                     </div>
                 </div>
@@ -928,7 +923,6 @@
         showNotification('Ошибка загрузки последних действий', 'error');
     }
 }
-
         
         async function loadTodayStats() {
             const today = new Date();
