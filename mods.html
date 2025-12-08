@@ -738,6 +738,19 @@
         const moderationPerPage = 10;
         
         // Инициализация
+        async function init() {
+            await checkAuth();
+            await checkModeratorStatus();
+            
+            if (!isModerator) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            await loadDashboardData();
+            setupCharts();
+        }
+        
         async function checkModeratorStatus() {
     try {
         // Проверяем таблицу moderators
@@ -776,26 +789,6 @@
             updateUserMenu();
         }
         
-        async function checkModeratorStatus() {
-            try {
-                // Проверяем таблицу moderators
-                const { data, error } = await supabase
-                    .from('moderators')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .single();
-                
-                isModerator = !!data && !error;
-                
-                if (!isModerator) {
-                    showNotification('Доступ запрещен. Только для модераторов.', 'error');
-                }
-                
-            } catch (error) {
-                console.error('Ошибка проверки модератора:', error);
-                isModerator = false;
-            }
-        }
         
         function updateUserMenu() {
             const userMenu = document.getElementById('user-menu');
