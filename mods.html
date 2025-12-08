@@ -952,8 +952,7 @@
             `;
         }
         
-        // Модерация сайтов
-       async function loadModerationSites() {
+      async function loadModerationSites() {
     try {
         const statusFilter = document.getElementById('moderation-filter').value;
         const biomFilter = document.getElementById('biom-filter').value;
@@ -981,29 +980,72 @@
         
         if (error) throw error;
         
-        // Получаем email пользователей
-        const userIds = [...new Set(sites.map(site => site.user_id))];
-        const { data: usersData } = await supabase
-            .rpc('get_users_info', { user_ids: userIds })
-            .catch(() => ({ data: [] }));
-        
-        const usersMap = {};
-        if (usersData) {
-            usersData.forEach(user => {
-                usersMap[user.id] = user.email;
-            });
-        }
-        
-        moderationSites = (sites || []).map(site => ({
-            ...site,
-            user_email: usersMap[site.user_id] || `Пользователь ${site.user_id.substring(0, 8)}...`
-        }));
-        
+        moderationSites = sites || [];
         const totalSites = count || 0;
         const totalPages = Math.ceil(totalSites / moderationPerPage);
         
-        renderModerationSites();
-        updatePagination(totalPages);
+        // Обновляем отображение
+        const container = document.getElementById('moderation-sites');
+        
+        if (moderationSites.length === 0) {
+            container.innerHTML = `
+                <div class="table-row" style="grid-template-columns: 1fr; text-align: center; padding: 3rem;">
+                    <div style="color: #666; font-style: italic;">
+                        Сайты не найдены
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = moderationSites.map(site => `
+                <div class="table-row">
+                    <div>
+                        <a href="${site.url}" target="_blank" class="site-url">
+                            ${site.title || 'Без названия'}
+                        </a>
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">${site.url}</div>
+                        <div style="font-size: 0.8rem; color: #888; margin-top: 2px;">
+                            ID: ${site.id.substring(0, 8)}...
+                        </div>
+                    </div>
+                    <div>${getBiomName(site.category)}</div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #666;">
+                            ${site.user_id.substring(0, 8)}...
+                        </div>
+                        <div style="font-size: 0.7rem; color: #999;">
+                            ${formatDate(site.created_at)}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="status-badge status-${site.status}">
+                            ${getStatusName(site.status)}
+                        </span>
+                    </div>
+                    <div class="action-buttons">
+                        ${site.status === 'pending' ? `
+                            <button class="action-btn btn-approve" onclick="approveSite('${site.id}')" title="Одобрить">
+                                ✅
+                            </button>
+                            <button class="action-btn btn-reject" onclick="rejectSite('${site.id}')" title="Отклонить">
+                                ❌
+                            </button>
+                        ` : ''}
+                        <button class="action-btn btn-delete" onclick="deleteSiteMod('${site.id}')" title="Удалить">
+                            🗑️
+                        </button>
+                        <button class="action-btn" onclick="previewSite('${site.id}')" 
+                                style="background: var(--goose-blue); color: white;" title="Просмотр">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Обновляем пагинацию
+        document.getElementById('page-info').textContent = `Страница ${moderationPage} из ${totalPages}`;
+        document.getElementById('prev-page').disabled = moderationPage <= 1;
+        document.getElementById('next-page').disabled = moderationPage >= totalPages;
         
     } catch (error) {
         console.error('Ошибка загрузки сайтов:', error);
