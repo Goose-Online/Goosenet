@@ -464,7 +464,7 @@
     </footer>
 
     <!-- Гусиный виджет -->
-    <script src="https://ваш-виджет.vercel.app/widget.js"></script>
+    <script src="https://goosenet-widget.vercel.app/widget.js"></script>
 
     <script>
         // Глобальные переменные
@@ -549,7 +549,7 @@
                 document.getElementById('banner-name').textContent = displayName;
                 document.getElementById('banner-sites').textContent = `${userSites.length} сайтов`;
                 document.getElementById('banner-action').textContent = 'Профиль';
-                document.getElementById('banner-action').onclick = () => window.open('https://ваш-хаб.vercel.app/profile', '_blank');
+                document.getElementById('banner-action').onclick = () => window.open('https://goosenet-one.vercel.app/profile', '_blank');
                 
             } else {
                 // Гостевой режим
@@ -696,14 +696,14 @@
         function gooseSendMessage() {
             if (currentGooseUser) {
                 alert('Форма сообщений откроется в хабе Гуснета');
-                window.open('https://ваш-хаб.vercel.app/messages', '_blank');
+                window.open('https://goosenet-one.vercel.app/messages', '_blank');
             } else {
                 gooseLogin();
             }
         }
         
         function gooseAddSite() {
-            window.open('https://ваш-хаб.vercel.app', '_blank');
+            window.open('https://goosenet-one.vercel.app', '_blank');
         }
         
         function refreshProfile() {
