@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ru" data-goosenet-site="true">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="goosenet-verify" content="ВАШ_УНИКАЛЬНЫЙ_КОД_САЙТА">
+    <title>Мой сайт в Гусином Интернете</title>
+    
+    <!-- Гусиный виджет (обязательно) -->
+    <script src="https://goosenet-widget.vercel.app/widget.js"></script>
+    
+    <!-- Гусиные стили (опционально) -->
+    <link rel="stylesheet" href="https://goosenet-one.vercel.app/goose-styles.css">
+    
+    <style>
+        /* Основные стили в духе Гуснета */
+        :root {
+            --goose-yellow: #ffcc00;
+            --goose-brown: #8b4513;
+            --goose-green: #2e8b57;
+            --goose-blue: #4682b4;
+            --goose-white: #f5f5f5;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e6f3ff 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        /* Фон с гусиным паттерном */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%2300ccff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.3;
+            z-index: -1;
+        }
+        
+        /* Гусиный header */
+        .goose-header {
+            background: linear-gradient(90deg, var(--goose-yellow), var(--goose-brown));
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+            border-bottom: 5px solid var(--goose-green);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .goose-header::after {
+            content: "🦢";
+            position: absolute;
+            right: 20px;
+            bottom: 10px;
+            font-size: 3rem;
+            opacity: 0.2;
+            transform: rotate(15deg);
+        }
+        
+        .goose-title {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .goose-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Навигация */
+        .goose-nav {
+            background: var(--goose-brown);
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        .nav-link:hover {
+            background: var(--goose-yellow);
+            color: #333;
+        }
+        
+        /* Основной контент */
+        .goose-main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        
+        @media (min-width: 768px) {
+            .goose-main {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+        
+        .content-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 2px solid var(--goose-yellow);
+        }
+        
+        .content-card h2 {
+            color: var(--goose-brown);
+            border-bottom: 3px solid var(--goose-yellow);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .goose-post {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px dashed #ddd;
+        }
+        
+        .goose-post:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .post-title {
+            color: var(--goose-blue);
+            margin-bottom: 0.5rem;
+        }
+        
+        .post-date {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Сайдбар */
+        .goose-sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 2px solid var(--goose-green);
+        }
+        
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+        
+        .sidebar-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .goose-badge {
+            display: inline-block;
+            background: var(--goose-yellow);
+            color: #333;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            margin: 0.2rem;
+        }
+        
+        /* Футер */
+        .goose-footer {
+            background: var(--goose-brown);
+            color: white;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 3rem;
+        }
+        
+        .goose-footer a {
+            color: var(--goose-yellow);
+            text-decoration: none;
+        }
+        
+        .goose-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Гусиный баннер (обязателен для всех сайтов Гуснета) */
+        .goose-network-badge {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: white;
+            border: 2px solid var(--goose-yellow);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .goose-network-badge img {
+            width: 40px;
+            height: 40px;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .goose-title {
+                font-size: 2rem;
+            }
+            
+            .goose-nav {
+                gap: 1rem;
+            }
+            
+            .goose-network-badge {
+                position: static;
+                margin: 1rem auto;
+                justify-content: center;
+                width: fit-content;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Гусиный баннер (ссылка на хаб) -->
+    <a href="https://goosenet-one.vercel.app" target="_blank" class="goose-network-badge">
+        <div style="font-size: 24px;">🦢</div>
+        <div>
+            <strong>Часть Гусиного Интернета</strong><br>
+            <small>Кликните для входа в хаб</small>
+        </div>
+    </a>
+
+    <!-- Шапка сайта -->
+    <header class="goose-header">
+        <h1 class="goose-title" id="site-title">Мой Гусиный Уголок</h1>
+        <p class="goose-subtitle" id="site-description">Добро пожаловать на мой сайт в Гусином Интернете! Здесь я делюсь мыслями о гусях, природе и цифровых болотах.</p>
+    </header>
+
+    <!-- Навигация -->
+    <nav class="goose-nav">
+        <a href="#home" class="nav-link">🏠 Главная</a>
+        <a href="#about" class="nav-link">📖 О сайте</a>
+        <a href="#posts" class="nav-link">📝 Записи</a>
+        <a href="#links" class="nav-link">🔗 Ссылки</a>
+        <a href="#contact" class="nav-link">✉️ Контакты</a>
+    </nav>
+
+    <!-- Основной контент -->
+    <main class="goose-main">
+        <!-- Основная колонка -->
+        <div class="content-column">
+            <section id="about" class="content-card">
+                <h2>О сайте</h2>
+                <div class="goose-post">
+                    <p>Этот сайт создан в рамках <strong>Гусиного Интернета</strong> — децентрализованной сети сайтов, объединённых любовью к гусям и свободному интернету.</p>
+                    <p>Здесь вы найдёте:</p>
+                    <ul>
+                        <li>Личные заметки и размышления</li>
+                        <li>Творческие эксперименты</li>
+                        <li>Ссылки на интересные ресурсы</li>
+                        <li>Интеграцию с Гусиным Интернетом</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="posts" class="content-card">
+                <h2>Последние записи</h2>
+                
+                <article class="goose-post">
+                    <h3 class="post-title">Как гуси выбирают маршрут перелёта</h3>
+                    <div class="post-date">🦢 8/12/2025</div>
+                    <p>Гуси используют сложную систему навигации, основанную на положении солнца, звёзд и магнитном поле Земли. Их способность лететь клином позволяет экономить до 70% энергии...</p>
+                </article>
+                
+                <article class="goose-post">
+                    <h3 class="post-title">Философия цифрового болота</h3>
+                    <div class="post-date">💭 8/12/2025</div>
+                    <p>Что делает интернет похожим на болото? И то, и другое — сложные экосистемы, где информация (или жизнь) течёт по непредсказуемым путям. В болоте, как и в сети, важно найти свою кочку...</p>
+                </article>
+                
+                <article class="goose-post">
+                    <h3 class="post-title">Запуск Гусиного Интернета</h3>
+                    <div class="post-date">🎉 7/12/2025</div>
+                    <p>Сегодня начал работать Гусиный Интернет! Это эксперимент по созданию дружелюбной и творческой сети сайтов с единым входом. Присоединяйтесь!</p>
+                </article>
+            </section>
+        </div>
+
+        <!-- Сайдбар -->
+        <aside class="goose-sidebar">
+            <section class="sidebar-section" id="links">
+                <h3>Мои угодья в Гуснете</h3>
+                <div class="goose-badge">🦢 Болото философии</div>
+                <div class="goose-badge">🌿 Природа</div>
+                <div class="goose-badge">💻 Технологии</div>
+            </section>
+
+            <section class="sidebar-section" id="contact">
+                <h3>Контакты</h3>
+                <p>Напишите мне через Гусиный Интернет:</p>
+                <button onclick="gooseSendMessage()" style="
+                    background: var(--goose-yellow);
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                    margin-top: 10px;
+                ">
+                    ✉️ Написать сообщение
+                </button>
+            </section>
+
+            <section class="sidebar-section">
+                <h3>Статистика сайта</h3>
+                <p>В Гуснете с: <strong>8 декабря 2025 года</strong></p>
+                <p>Посетителей: <strong id="visitor-count">0</strong></p>
+                <p>Биом: <span class="goose-badge" id="site-biom">Болото</span></p>
+            </section>
+        </aside>
+    </main>
+
+    <!-- Подвал -->
+    <footer class="goose-footer">
+        <p>© 2024 <span id="footer-site-title">Мой Гусиный Уголок</span>. Часть Гусиного Интернета.</p>
+        <p>
+            <a href="https://ваш-хаб.vercel.app" target="_blank">Войти в хаб</a> | 
+            <a href="#" onclick="gooseLogout()">Выйти</a> | 
+            <a href="#" onclick="showGooseInfo()">О Гуснете</a>
+        </p>
+        <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+            Этот сайт использует 🦢 Гусиный виджет для единого входа
+        </p>
+    </footer>
+
+    <script>
+        // Гусиные функции для интеграции
+        function gooseSendMessage() {
+            if (window.supabase && window.supabase.auth.getSession()) {
+                alert('Форма сообщения откроется в хабе Гуснета!');
+                window.open('https://goosenet-one.vercel.app/messages', '_blank');
+            } else {
+                alert('Сначала войдите через Гусиный виджет (кнопка 🦢 в правом нижнем углу)');
+            }
+        }
+        
+        function showGooseInfo() {
+            const info = `
+                🦢 Гусиный Интернет — это:
+                • Сеть независимых сайтов
+                • Единый вход для всех
+                • Карта связей между сайтами
+                • Сообщество творческих людей
+                
+                Присоединяйтесь: https://goosenet-one.vercel.app
+            `;
+            alert(info);
+        }
+        
+        // Автоматическое обновление статистики
+        document.addEventListener('DOMContentLoaded', function() {
+            // Симулируем счётчик посещений
+            let visits = localStorage.getItem('goose_site_visits') || 0;
+            visits++;
+            localStorage.setItem('goose_site_visits', visits);
+            document.getElementById('visitor-count').textContent = visits;
+            
+            // Проверяем, авторизован ли пользователь через Гуснет
+            if (window.supabase) {
+                window.supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session) {
+                        console.log('🦢 Пользователь Гуснета на сайте:', session.user.email);
+                        // Можно показать приветствие и т.д.
+                    }
+                });
+            }
+        });
+        
+        // Функция для динамического обновления данных сайта
+        function updateSiteData(data) {
+            if (data.title) {
+                document.getElementById('site-title').textContent = data.title;
+                document.getElementById('footer-site-title').textContent = data.title;
+                document.title = data.title + ' | Гусиный Интернет';
+            }
+            if (data.description) {
+                document.getElementById('site-description').textContent = data.description;
+            }
+            if (data.biom) {
+                document.getElementById('site-biom').textContent = data.biom;
+            }
+        }
+        
+        // Пример данных (в реальности можно загружать из JSON)
+        const siteData = {
+            title: "Мой Гусиный Уголок",
+            description: "Добро пожаловать на мой сайт в Гусином Интернете!",
+            biom: "Болото"
+        };
+        
+        updateSiteData(siteData);
+    </script>
+</body>
+</html>
