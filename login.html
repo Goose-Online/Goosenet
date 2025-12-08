@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в Гусиный Интернет</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #ffcc00;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #ffd633;
+        }
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #888;
+            position: relative;
+        }
+        .divider::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+            z-index: 1;
+        }
+        .divider span {
+            background: white;
+            padding: 0 10px;
+            position: relative;
+            z-index: 2;
+        }
+        .oauth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .oauth-btn {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+        .oauth-btn:hover {
+            background: #f5f5f5;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        .tab.active {
+            border-bottom-color: #ffcc00;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>🦢 Гусиный Интернет</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('login')">Вход</div>
+            <div class="tab" onclick="switchTab('signup')">Регистрация</div>
+        </div>
+        
+        <div id="error-message" class="error"></div>
+        <div id="success-message" class="success"></div>
+        
+        <div id="login-tab" class="tab-content active">
+            <div class="oauth-buttons">
+                <button class="oauth-btn" onclick="loginWithGitHub()">
+                    <img src="https://github.githubassets.com/favicons/favicon.png" width="16" height="16">
+                    Войти через GitHub
+                </button>
+                <button class="oauth-btn" onclick="loginWithGoogle()">
+                    <img src="https://www.google.com/favicon.ico" width="16" height="16">
+                    Войти через Google
+                </button>
+            </div>
+            
+            <div class="divider"><span>или</span></div>
+            
+            <div class="input-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" placeholder="ваш@email.com">
+            </div>
+            <div class="input-group">
+                <label for="login-password">Пароль</label>
+                <input type="password" id="login-password" placeholder="••••••••">
+            </div>
+            <button onclick="loginWithEmail()">Войти</button>
+        </div>
+        
+        <div id="signup-tab" class="tab-content">
+            <div class="input-group">
+                <label for="signup-email">Email</label>
+                <input type="email" id="signup-email" placeholder="ваш@email.com">
+            </div>
+            <div class="input-group">
+                <label for="signup-password">Пароль</label>
+                <input type="password" id="signup-password" placeholder="••••••••">
+            </div>
+            <div class="input-group">
+                <label for="signup-password-confirm">Подтвердите пароль</label>
+                <input type="password" id="signup-password-confirm" placeholder="••••••••">
+            </div>
+            <button onclick="signupWithEmail()">Зарегистрироваться</button>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация (замените на свои ключи!)
+        const SUPABASE_URL = 'https://uvhtwedzxejuwiaofavk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aHR3ZWR6eGVqdXdpYW9mYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDA3MjgsImV4cCI6MjA4MDcxNjcyOH0.9l4Xlj4CwRJS9Q3cT-pK9udW25-ptewrozUDbLgTjUM';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Проверяем, пришёл ли токен из родительского окна
+        window.addEventListener('message', async (event) => {
+            if (event.data.type === 'GOOSE_LOGIN_SUCCESS') {
+                showSuccess('Вход выполнен! Закройте это окно.');
+                // Отправляем сообщение обратно родительскому окну
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'GOOSE_LOGIN_COMPLETE',
+                        success: true,
+                        session: event.data.session
+                    }, '*');
+                    setTimeout(() => window.close(), 1000);
+                }
+            }
+        });
+        
+        // Проверяем, не вошёл ли пользователь уже
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                // Отправляем сообщение родительскому окну
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'GOOSE_LOGIN_COMPLETE',
+                        success: true,
+                        session: session
+                    }, '*');
+                    setTimeout(() => window.close(), 500);
+                }
+            }
+        });
+        
+        // Функции для входа
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab[onclick*="${tabName}"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+        
+        function showError(message) {
+            const el = document.getElementById('error-message');
+            el.textContent = message;
+            el.style.display = 'block';
+            document.getElementById('success-message').style.display = 'none';
+        }
+        
+        function showSuccess(message) {
+            const el = document.getElementById('success-message');
+            el.textContent = message;
+            el.style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        }
+        
+        async function loginWithEmail() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                showError('Заполните все поля');
+                return;
+            }
+            
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+            
+            if (error) {
+                showError(error.message);
+            } else {
+                showSuccess('Вход выполнен! Закрываем окно...');
+                // Автоматически закроется через onAuthStateChange
+            }
+        }
+        
+        async function signupWithEmail() {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const passwordConfirm = document.getElementById('signup-password-confirm').value;
+            
+            if (!email || !password) {
+                showError('Заполните все поля');
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                showError('Пароли не совпадают');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showError('Пароль должен быть не менее 6 символов');
+                return;
+            }
+            
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password
+            });
+            
+            if (error) {
+                showError(error.message);
+            } else {
+                showSuccess('Регистрация успешна! Проверьте email для подтверждения.');
+                setTimeout(() => switchTab('login'), 2000);
+            }
+        }
+        
+        async function loginWithGitHub() {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'github',
+                options: {
+                    redirectTo: `${window.location.origin}/login.html`
+                }
+            });
+            
+            if (error) showError(error.message);
+        }
+        
+        async function loginWithGoogle() {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/login.html`
+                }
+            });
+            
+            if (error) showError(error.message);
+        }
+        
+        // Автоматически проверяем сессию при загрузке
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session && window.opener) {
+                window.opener.postMessage({
+                    type: 'GOOSE_LOGIN_COMPLETE',
+                    success: true,
+                    session: session
+                }, '*');
+                window.close();
+            }
+        });
+    </script>
+</body>
+</html>
