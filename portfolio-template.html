@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ru" data-goosenet-site="true">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Портфолио | Гусиный Интернет</title>
+    
+    <style>
+        /* Гусиные переменные */
+        :root {
+            --goose-primary: #ffcc00;
+            --goose-secondary: #8b4513;
+            --goose-accent: #2e8b57;
+            --goose-light: #f9f3e9;
+            --goose-dark: #333333;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--goose-light);
+            color: var(--goose-dark);
+            line-height: 1.6;
+        }
+        
+        /* Header с профилем */
+        .profile-header {
+            background: linear-gradient(135deg, var(--goose-primary), var(--goose-secondary));
+            color: white;
+            padding: 3rem 1rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .profile-header::before {
+            content: "🦢";
+            position: absolute;
+            font-size: 10rem;
+            opacity: 0.1;
+            right: -30px;
+            top: -30px;
+            transform: rotate(15deg);
+        }
+        
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            background: white;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            border: 5px solid var(--goose-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--goose-secondary);
+            font-weight: bold;
+        }
+        
+        .profile-name {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .profile-title {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+        
+        .profile-badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Контент */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .profile-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        @media (min-width: 768px) {
+            .profile-content {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            border: 2px solid var(--goose-primary);
+        }
+        
+        .section-title {
+            color: var(--goose-secondary);
+            border-bottom: 3px solid var(--goose-primary);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Проекты */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .project-card {
+            background: var(--goose-light);
+            border-radius: 10px;
+            padding: 1.5rem;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .project-card:hover {
+            border-color: var(--goose-primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(255, 204, 0, 0.1);
+        }
+        
+        .project-title {
+            color: var(--goose-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .project-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 1rem;
+        }
+        
+        .tag {
+            background: var(--goose-primary);
+            color: var(--goose-dark);
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        /* Статистика */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--goose-light);
+            border-radius: 10px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--goose-secondary);
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        /* Гусиные связи */
+        .connections-list {
+            list-style: none;
+        }
+        
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .connection-item:last-child {
+            border-bottom: none;
+        }
+        
+        .connection-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--goose-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--goose-secondary);
+        }
+        
+        /* Футер */
+        .profile-footer {
+            background: var(--goose-secondary);
+            color: white;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 3rem;
+        }
+        
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 1rem 0;
+        }
+        
+        .social-link {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            transition: background 0.3s;
+        }
+        
+        .social-link:hover {
+            background: var(--goose-primary);
+            color: var(--goose-dark);
+        }
+        
+        /* Гусиный баннер */
+        .goose-banner {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border: 3px solid var(--goose-primary);
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 350px;
+            transition: transform 0.3s;
+        }
+        
+        .goose-banner:hover {
+            transform: scale(1.05);
+        }
+        
+        .goose-banner-close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .profile-name {
+                font-size: 2rem;
+            }
+            
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .goose-banner {
+                position: static;
+                margin: 1rem auto;
+                width: calc(100% - 2rem);
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Гусиный баннер с профилем -->
+    <div class="goose-banner" id="goose-profile-banner">
+        <button class="goose-banner-close" onclick="hideBanner()">×</button>
+        <div style="font-size: 2rem;">🦢</div>
+        <div>
+            <div style="font-weight: bold;" id="banner-name">Загрузка профиля...</div>
+            <div style="font-size: 0.9rem; color: #666;" id="banner-status">
+                <span id="banner-sites">0 сайтов</span> в Гуснете
+            </div>
+            <button onclick="gooseLogin()" style="
+                margin-top: 5px;
+                background: var(--goose-primary);
+                border: none;
+                padding: 5px 15px;
+                border-radius: 15px;
+                font-size: 0.9rem;
+                cursor: pointer;
+            " id="banner-action">
+                Войти
+            </button>
+        </div>
+    </div>
+
+    <!-- Шапка профиля -->
+    <header class="profile-header">
+        <div class="profile-avatar" id="profile-avatar">Г</div>
+        <h1 class="profile-name" id="profile-name">Гость Гусиного Интернета</h1>
+        <p class="profile-title" id="profile-title">Путешественник по цифровым болотам</p>
+        
+        <div class="profile-badges" id="profile-badges">
+            <div class="badge">🦢 Новый гусятник</div>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <div class="container">
+        <div class="profile-content">
+            <!-- Левая колонка -->
+            <div>
+                <!-- Обо мне -->
+                <section class="section-card">
+                    <h2 class="section-title">👋 Обо мне</h2>
+                    <div id="profile-about">
+                        <p>Добро пожаловать на мою страницу в Гусином Интернете! Я исследую цифровые пространства и создаю интересные проекты.</p>
+                        <p>Люблю простые технологии, открытый интернет и, конечно, гусей.</p>
+                    </div>
+                    
+                    <!-- Динамические данные -->
+                    <div class="stats-grid" id="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="stat-sites">0</span>
+                            <span class="stat-label">Сайтов в Гуснете</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="stat-days">1</span>
+                            <span class="stat-label">Дней в Гуснете</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="stat-connections">0</span>
+                            <span class="stat-label">Связей</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="stat-visits">0</span>
+                            <span class="stat-label">Посетителей</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Мои проекты -->
+                <section class="section-card">
+                    <h2 class="section-title">🚀 Мои проекты</h2>
+                    <div class="projects-grid" id="projects-container">
+                        <!-- Проекты загружаются динамически -->
+                        <div class="project-card">
+                            <h3 class="project-title">Этот сайт-портфолио</h3>
+                            <p>Пример сайта, использующего систему профилей Гусиного Интернета.</p>
+                            <div class="project-tags">
+                                <span class="tag">HTML/CSS</span>
+                                <span class="tag">Гусиный Интернет</span>
+                                <span class="tag">Портфолио</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Правая колонка -->
+            <div>
+                <!-- Мои сайты в Гуснете -->
+                <section class="section-card">
+                    <h2 class="section-title">🌐 Мои угодья</h2>
+                    <div id="my-sites">
+                        <p style="color: #666; font-style: italic;">
+                            Загружаем список ваших сайтов...
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Связи в Гуснете -->
+                <section class="section-card">
+                    <h2 class="section-title">🔗 Мои связи</h2>
+                    <ul class="connections-list" id="connections-list">
+                        <li class="connection-item">
+                            <div class="connection-avatar">Г</div>
+                            <div>
+                                <div style="font-weight: bold;">Гусиный Интернет</div>
+                                <div style="font-size: 0.9rem; color: #666;">Официальный хаб</div>
+                            </div>
+                        </li>
+                    </ul>
+                </section>
+
+                <!-- Навыки -->
+                <section class="section-card">
+                    <h2 class="section-title">🛠️ Навыки</h2>
+                    <div id="skills-container">
+                        <div style="margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Веб-разработка</span>
+                                <span>85%</span>
+                            </div>
+                            <div style="height: 8px; background: #eee; border-radius: 4px; margin-top: 5px;">
+                                <div style="width: 85%; height: 100%; background: var(--goose-primary); border-radius: 4px;"></div>
+                            </div>
+                        </div>
+                        <!-- Навыки загружаются динамически -->
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер -->
+    <footer class="profile-footer">
+        <h3 id="footer-name">Профиль в Гусином Интернете</h3>
+        <p>Этот сайт использует систему профилей Гусиного Интернета</p>
+        
+        <div class="social-links">
+            <a href="#" class="social-link" onclick="gooseSendMessage()">✉️ Написать</a>
+            <a href="https://ваш-хаб.vercel.app" target="_blank" class="social-link">🏠 Войти в хаб</a>
+            <a href="#" class="social-link" onclick="refreshProfile()">🔄 Обновить</a>
+        </div>
+        
+        <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+            Профиль обновляется автоматически при входе через Гусиный виджет
+        </p>
+    </footer>
+
+    <!-- Гусиный виджет -->
+    <script src="https://ваш-виджет.vercel.app/widget.js"></script>
+
+    <script>
+        // Глобальные переменные
+        let currentGooseUser = null;
+        let userSites = [];
+        
+        // Функции Гусиного Интернета
+        async function loadGooseProfile() {
+            try {
+                if (!window.supabase) {
+                    console.log('🦢 Supabase не загружен');
+                    return;
+                }
+                
+                // Проверяем сессию
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session && session.user) {
+                    currentGooseUser = session.user;
+                    updateProfileUI(currentGooseUser);
+                    
+                    // Загружаем данные пользователя из хаба
+                    await loadUserData(currentGooseUser.id);
+                    
+                    // Обновляем баннер
+                    updateBanner(true);
+                } else {
+                    // Гостевой режим
+                    updateProfileUI(null);
+                    updateBanner(false);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки профиля:', error);
+            }
+        }
+        
+        async function loadUserData(userId) {
+            try {
+                // Загружаем сайты пользователя
+                const { data: sites } = await supabase
+                    .from('sites')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('status', 'approved');
+                
+                userSites = sites || [];
+                
+                // Обновляем интерфейс
+                updateSitesList();
+                updateStats();
+                
+                // Загружаем дополнительные данные (можно расширить)
+                loadAdditionalData(userId);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+            }
+        }
+        
+        function updateProfileUI(user) {
+            const avatar = document.getElementById('profile-avatar');
+            const name = document.getElementById('profile-name');
+            const title = document.getElementById('profile-title');
+            const badges = document.getElementById('profile-badges');
+            const footerName = document.getElementById('footer-name');
+            
+            if (user) {
+                // Пользователь авторизован
+                const displayName = user.user_metadata?.name || user.email.split('@')[0];
+                const firstLetter = displayName[0].toUpperCase();
+                
+                avatar.textContent = firstLetter;
+                avatar.style.background = stringToColor(user.email);
+                name.textContent = displayName;
+                title.textContent = 'Участник Гусиного Интернета';
+                footerName.textContent = `Профиль ${displayName}`;
+                
+                // Обновляем бейджи
+                updateBadges(user);
+                
+                // Обновляем баннер
+                document.getElementById('banner-name').textContent = displayName;
+                document.getElementById('banner-sites').textContent = `${userSites.length} сайтов`;
+                document.getElementById('banner-action').textContent = 'Профиль';
+                document.getElementById('banner-action').onclick = () => window.open('https://ваш-хаб.vercel.app/profile', '_blank');
+                
+            } else {
+                // Гостевой режим
+                avatar.textContent = 'Г';
+                avatar.style.background = 'var(--goose-primary)';
+                name.textContent = 'Гость Гусиного Интернета';
+                title.textContent = 'Путешественник по цифровым болотам';
+                footerName.textContent = 'Профиль в Гусином Интернете';
+                
+                badges.innerHTML = '<div class="badge">🦢 Гость</div>';
+                
+                // Баннер
+                document.getElementById('banner-name').textContent = 'Гость';
+                document.getElementById('banner-status').textContent = 'Войдите в Гуснет';
+                document.getElementById('banner-action').textContent = 'Войти';
+                document.getElementById('banner-action').onclick = gooseLogin;
+            }
+        }
+        
+        function updateBadges(user) {
+            const badgesContainer = document.getElementById('profile-badges');
+            let badgesHTML = '';
+            
+            // Бейджи по активности
+            if (userSites.length >= 1) {
+                badgesHTML += '<div class="badge">🌱 Первое угодье</div>';
+            }
+            if (userSites.length >= 3) {
+                badgesHTML += '<div class="badge">🏞️ Основатель болот</div>';
+            }
+            
+            // Бейдж по времени в Гуснете
+            const daysInGooseNet = Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            if (daysInGooseNet > 30) {
+                badgesHTML += '<div class="badge">⏳ Старый гусятник</div>';
+            }
+            
+            badgesContainer.innerHTML = badgesHTML || '<div class="badge">🦢 Новый гусятник</div>';
+        }
+        
+        function updateSitesList() {
+            const sitesContainer = document.getElementById('my-sites');
+            
+            if (userSites.length === 0) {
+                sitesContainer.innerHTML = `
+                    <p style="color: #666; font-style: italic;">
+                        У вас пока нет сайтов в Гусином Интернете.
+                    </p>
+                    <button onclick="gooseAddSite()" style="
+                        margin-top: 10px;
+                        background: var(--goose-primary);
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 20px;
+                        cursor: pointer;
+                        font-weight: bold;
+                    ">
+                        🦢 Добавить первый сайт
+                    </button>
+                `;
+                return;
+            }
+            
+            let sitesHTML = '<ul style="list-style: none; padding-left: 0;">';
+            userSites.forEach(site => {
+                sitesHTML += `
+                    <li style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                        <a href="${site.url}" target="_blank" style="
+                            color: var(--goose-secondary);
+                            text-decoration: none;
+                            font-weight: bold;
+                        ">${site.title}</a>
+                        <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                            ${site.description || 'Без описания'}
+                        </div>
+                        <div style="margin-top: 5px;">
+                            <span style="
+                                display: inline-block;
+                                background: var(--goose-primary);
+                                padding: 2px 10px;
+                                border-radius: 10px;
+                                font-size: 0.8rem;
+                            ">${getBiomName(site.category)}</span>
+                        </div>
+                    </li>
+                `;
+            });
+            sitesHTML += '</ul>';
+            
+            sitesContainer.innerHTML = sitesHTML;
+        }
+        
+        function updateStats() {
+            // Обновляем статистику
+            document.getElementById('stat-sites').textContent = userSites.length;
+            document.getElementById('stat-connections').textContent = Math.min(userSites.length * 2, 99);
+            
+            // Счётчик посещений из localStorage
+            let visits = localStorage.getItem('portfolio_visits') || 0;
+            visits++;
+            localStorage.setItem('portfolio_visits', visits);
+            document.getElementById('stat-visits').textContent = visits;
+        }
+        
+        function updateBanner(isLoggedIn) {
+            const banner = document.getElementById('goose-profile-banner');
+            if (!banner) return;
+            
+            if (isLoggedIn) {
+                banner.style.display = 'flex';
+            } else {
+                banner.style.display = 'flex';
+            }
+        }
+        
+        // Вспомогательные функции
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return `hsl(${hash % 360}, 70%, 65%)`;
+        }
+        
+        function getBiomName(code) {
+            const biomMap = {
+                swamp: '🦢 Болото',
+                tech: '💻 Техноболото',
+                art: '🎨 Искусство',
+                nature: '🌿 Природа'
+            };
+            return biomMap[code] || code;
+        }
+        
+        // Функции для кнопок
+        function gooseLogin() {
+            if (window.openGooseLogin) {
+                window.openGooseLogin();
+            } else {
+                alert('Используйте кнопку 🦢 в правом нижнем углу для входа');
+            }
+        }
+        
+        function gooseSendMessage() {
+            if (currentGooseUser) {
+                alert('Форма сообщений откроется в хабе Гуснета');
+                window.open('https://ваш-хаб.vercel.app/messages', '_blank');
+            } else {
+                gooseLogin();
+            }
+        }
+        
+        function gooseAddSite() {
+            window.open('https://ваш-хаб.vercel.app', '_blank');
+        }
+        
+        function refreshProfile() {
+            loadGooseProfile();
+            alert('Профиль обновляется...');
+        }
+        
+        function hideBanner() {
+            document.getElementById('goose-profile-banner').style.display = 'none';
+        }
+        
+        function loadAdditionalData(userId) {
+            // Можно добавить загрузку:
+            // - Комментариев пользователя
+            // - Лайков/гоготов
+            // - Связей с другими пользователями
+            // - Достижений
+            
+            setTimeout(() => {
+                // Пример динамического добавления проекта
+                const projectsContainer = document.getElementById('projects-container');
+                if (userSites.length > 0) {
+                    const newProject = document.createElement('div');
+                    newProject.className = 'project-card';
+                    newProject.innerHTML = `
+                        <h3 class="project-title">${userSites[0].title}</h3>
+                        <p>Мой сайт в Гусином Интернете</p>
+                        <div class="project-tags">
+                            <span class="tag">Гусиный Интернет</span>
+                            <span class="tag">${getBiomName(userSites[0].category)}</span>
+                        </div>
+                    `;
+                    projectsContainer.appendChild(newProject);
+                }
+            }, 1000);
+        }
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            // Загружаем профиль
+            setTimeout(loadGooseProfile, 1000);
+            
+            // Слушаем изменения авторизации
+            if (window.supabase) {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                        loadGooseProfile();
+                    } else if (event === 'SIGNED_OUT') {
+                        loadGooseProfile();
+                    }
+                });
+            }
+            
+            // Загружаем данные для гостя
+            updateStats();
+        });
+        
+        // Глобальные функции для виджета
+        window.refreshGooseProfile = refreshProfile;
+        window.gooseSendMessage = gooseSendMessage;
+    </script>
+</body>
+</html>
