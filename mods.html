@@ -1241,7 +1241,7 @@
         // Получаем всех пользователей из сайтов
         const { data: allSites } = await supabase
             .from('sites')
-            .select('user_id, status, created_at')
+            .select('user_id, status, created_at, email')
             .order('created_at', { ascending: false });
         
         if (!allSites || allSites.length === 0) {
