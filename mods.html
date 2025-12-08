@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель модератора | Гусиный Интернет</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --goose-yellow: #ffcc00;
+            --goose-brown: #8b4513;
+            --goose-green: #2e8b57;
+            --goose-blue: #4682b4;
+            --goose-red: #dc3545;
+            --goose-light: #f9f3e9;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--goose-light);
+            color: #333;
+        }
+        
+        /* Header */
+        .mod-header {
+            background: linear-gradient(90deg, var(--goose-brown), #5a2d0c);
+            color: white;
+            padding: 1.5rem 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .mod-badge {
+            background: var(--goose-red);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: background 0.3s;
+        }
+        
+        .nav-link.active {
+            background: var(--goose-yellow);
+            color: var(--goose-brown);
+            font-weight: bold;
+        }
+        
+        .nav-link:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Основной контент */
+        .mod-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        
+        @media (min-width: 1200px) {
+            .mod-container {
+                grid-template-columns: 250px 1fr;
+            }
+        }
+        
+        /* Сайдбар */
+        .mod-sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: 2px solid var(--goose-brown);
+            height: fit-content;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+        
+        .sidebar-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .sidebar-title {
+            color: var(--goose-brown);
+            border-bottom: 2px solid var(--goose-yellow);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .sidebar-link {
+            display: block;
+            padding: 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+            margin-bottom: 5px;
+            transition: background 0.3s;
+        }
+        
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: var(--goose-light);
+            font-weight: bold;
+        }
+        
+        .sidebar-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Карточки */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border-top: 4px solid;
+        }
+        
+        .stat-card.pending { border-color: var(--goose-yellow); }
+        .stat-card.approved { border-color: var(--goose-green); }
+        .stat-card.rejected { border-color: var(--goose-red); }
+        .stat-card.users { border-color: var(--goose-blue); }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* Графики */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            color: var(--goose-brown);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        /* Таблица сайтов */
+        .mod-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .table-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+            background: var(--goose-brown);
+            color: white;
+            padding: 1rem;
+            font-weight: bold;
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        
+        .table-row:hover {
+            background: #f9f9f9;
+        }
+        
+        .site-url {
+            color: var(--goose-blue);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .site-url:hover {
+            text-decoration: underline;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .btn-approve {
+            background: var(--goose-green);
+            color: white;
+        }
+        
+        .btn-reject {
+            background: var(--goose-red);
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #6c757d;
+            color: white;
+        }
+        
+        /* Модалки */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            color: var(--goose-brown);
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--goose-yellow);
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: var(--goose-yellow);
+            color: #333;
+        }
+        
+        .btn-primary:hover {
+            background: #ffd633;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: var(--goose-brown);
+            border: 2px solid var(--goose-yellow);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--goose-light);
+        }
+        
+        /* Фильтры */
+        .filters-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-select {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+        }
+        
+        .refresh-btn {
+            background: var(--goose-blue);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        
+        /* Нотификации */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            border-left: 4px solid;
+            z-index: 1001;
+            display: none;
+            min-width: 300px;
+        }
+        
+        .notification.success {
+            border-left-color: var(--goose-green);
+        }
+        
+        .notification.error {
+            border-left-color: var(--goose-red);
+        }
+        
+        @media (max-width: 768px) {
+            .table-header,
+            .table-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .action-buttons {
+                flex-wrap: wrap;
+            }
+            
+            .filters-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="mod-header">
+        <div class="header-container">
+            <div class="logo">
+                <span>🦢</span>
+                <span>Гусиный Интернет</span>
+                <span class="mod-badge">Модератор</span>
+            </div>
+            
+            <nav class="nav-links">
+                <a href="index.html" class="nav-link">🏠 Поиск</a>
+                <a href="profile.html" class="nav-link">👤 Профиль</a>
+                <a href="sites.html" class="nav-link">🌐 Сайты</a>
+                <a href="mods.html" class="nav-link active">🛡️ Модерация</a>
+            </nav>
+            
+            <div id="user-menu">
+                <!-- Динамически заполняется -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <div class="mod-container">
+        <!-- Сайдбар -->
+        <aside class="mod-sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Панель управления</div>
+                <a href="#dashboard" class="sidebar-link active" onclick="showSection('dashboard')">
+                    📊 Дашборд
+                </a>
+                <a href="#moderation" class="sidebar-link" onclick="showSection('moderation')">
+                    ⏳ Модерация
+                </a>
+                <a href="#users" class="sidebar-link" onclick="showSection('users')">
+                    👥 Пользователи
+                </a>
+                <a href="#analytics" class="sidebar-link" onclick="showSection('analytics')">
+                    📈 Аналитика
+                </a>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-title">Быстрые действия</div>
+                <a href="#" class="sidebar-link" onclick="showPendingSites()">
+                    🔍 Проверить новые
+                </a>
+                <a href="#" class="sidebar-link" onclick="showAddModeratorModal()">
+                    ➕ Добавить модератора
+                </a>
+                <a href="#" class="sidebar-link" onclick="exportData()">
+                    📥 Экспорт данных
+                </a>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-title">Статистика за сегодня</div>
+                <div id="today-stats">
+                    <!-- Динамически заполняется -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Основная область -->
+        <main>
+            <!-- Дашборд -->
+            <section id="dashboard-section" class="dashboard-section">
+                <h1 style="color: var(--goose-brown); margin-bottom: 1.5rem;">
+                    📊 Панель модератора
+                </h1>
+                
+                <!-- Карточки статистики -->
+                <div class="stats-cards">
+                    <div class="stat-card pending">
+                        <span class="stat-number" id="stat-pending">0</span>
+                        <span class="stat-label">Ожидают модерации</span>
+                    </div>
+                    <div class="stat-card approved">
+                        <span class="stat-number" id="stat-approved">0</span>
+                        <span class="stat-label">Одобрено сегодня</span>
+                    </div>
+                    <div class="stat-card rejected">
+                        <span class="stat-number" id="stat-rejected">0</span>
+                        <span class="stat-label">Отклонено сегодня</span>
+                    </div>
+                    <div class="stat-card users">
+                        <span class="stat-number" id="stat-users">0</span>
+                        <span class="stat-label">Активных пользователей</span>
+                    </div>
+                </div>
+                
+                <!-- Графики -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-title">Статусы сайтов</div>
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Активность по дням</div>
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Последние действия -->
+                <div class="chart-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div class="chart-title">Последние действия</div>
+                        <button class="refresh-btn" onclick="loadRecentActivity()">🔄 Обновить</button>
+                    </div>
+                    <div id="recent-activity">
+                        <!-- Динамически заполняется -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Модерация -->
+            <section id="moderation-section" class="dashboard-section" style="display: none;">
+                <h1 style="color: var(--goose-brown); margin-bottom: 1.5rem;">
+                    ⏳ Модерация сайтов
+                </h1>
+                
+                <!-- Фильтры -->
+                <div class="filters-bar">
+                    <select class="filter-select" id="moderation-filter" onchange="filterModerationSites()">
+                        <option value="pending">⏳ Ожидают модерации</option>
+                        <option value="all">Все сайты</option>
+                        <option value="approved">✅ Одобренные</option>
+                        <option value="rejected">❌ Отклоненные</option>
+                    </select>
+                    
+                    <select class="filter-select" id="biom-filter" onchange="filterModerationSites()">
+                        <option value="">Все биомы</option>
+                        <option value="swamp">🦢 Болото</option>
+                        <option value="tech">💻 Техноболото</option>
+                        <option value="art">🎨 Искусство</option>
+                        <option value="nature">🌿 Природа</option>
+                    </select>
+                    
+                    <input type="text" class="search-input" id="moderation-search" 
+                           placeholder="Поиск по названию или URL..." 
+                           onkeyup="filterModerationSites()">
+                    
+                    <button class="refresh-btn" onclick="loadModerationSites()">🔄 Обновить</button>
+                </div>
+                
+                <!-- Таблица сайтов -->
+                <div class="mod-table">
+                    <div class="table-header">
+                        <div>Сайт</div>
+                        <div>Биом</div>
+                        <div>Пользователь</div>
+                        <div>Статус</div>
+                        <div>Действия</div>
+                    </div>
+                    <div id="moderation-sites">
+                        <!-- Динамически заполняется -->
+                    </div>
+                </div>
+                
+                <!-- Пагинация -->
+                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 1.5rem;">
+                    <button id="prev-page" class="btn-secondary" onclick="prevModerationPage()">← Назад</button>
+                    <span id="page-info" style="padding: 10px;">Страница 1</span>
+                    <button id="next-page" class="btn-secondary" onclick="nextModerationPage()">Вперёд →</button>
+                </div>
+            </section>
+
+            <!-- Пользователи -->
+            <section id="users-section" class="dashboard-section" style="display: none;">
+                <h1 style="color: var(--goose-brown); margin-bottom: 1.5rem;">
+                    👥 Управление пользователями
+                </h1>
+                
+                <!-- Таблица пользователей -->
+                <div class="mod-table">
+                    <div class="table-header">
+                        <div>Пользователь</div>
+                        <div>Сайты</div>
+                        <div>Статус</div>
+                        <div>Дата регистрации</div>
+                        <div>Действия</div>
+                    </div>
+                    <div id="users-list">
+                        <!-- Динамически заполняется -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Аналитика -->
+            <section id="analytics-section" class="dashboard-section" style="display: none;">
+                <h1 style="color: var(--goose-brown); margin-bottom: 1.5rem;">
+                    📈 Аналитика Гусиного Интернета
+                </h1>
+                
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-title">Распределение по биомам</div>
+                        <canvas id="biomsChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Рост сети</div>
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Подробная статистика -->
+                <div class="chart-container">
+                    <div class="chart-title">Подробная статистика</div>
+                    <div id="detailed-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <!-- Динамически заполняется -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Модалка добавления модератора -->
+    <div class="modal" id="add-moderator-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">➕ Добавить модератора</h2>
+            <form id="add-moderator-form" onsubmit="addModerator(event)">
+                <div class="form-group">
+                    <label class="form-label">Email пользователя</label>
+                    <input type="email" class="form-input" id="moderator-email" required 
+                           placeholder="user@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Уровень доступа</label>
+                    <select class="form-input" id="moderator-level" required>
+                        <option value="moderator">Модератор</option>
+                        <option value="admin">Администратор</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModeratorModal()">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка просмотра сайта -->
+    <div class="modal" id="site-preview-modal">
+        <div class="modal-content">
+            <h2 class="modal-title" id="preview-title">Просмотр сайта</h2>
+            <div id="site-preview-content">
+                <!-- Динамически заполняется -->
+            </div>
+            <div class="modal-actions" id="preview-actions">
+                <!-- Динамически заполняется -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Нотификации -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Конфигурация
+        const SUPABASE_URL = 'https://uvhtwedzxejuwiaofavk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aHR3ZWR6eGVqdXdpYW9mYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDA3MjgsImV4cCI6MjA4MDcxNjcyOH0.9l4Xlj4CwRJS9Q3cT-pK9udW25-ptewrozUDbLgTjUM';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Глобальные переменные
+        let currentUser = null;
+        let isModerator = false;
+        let moderationSites = [];
+        let moderationPage = 1;
+        const moderationPerPage = 10;
+        
+        // Инициализация
+        async function init() {
+            await checkAuth();
+            await checkModeratorStatus();
+            
+            if (!isModerator) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            await loadDashboardData();
+            setupCharts();
+        }
+        
+        // Проверка авторизации и статуса модератора
+        async function checkAuth() {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            currentUser = user;
+            updateUserMenu();
+        }
+        
+        async function checkModeratorStatus() {
+            try {
+                // Проверяем таблицу moderators
+                const { data, error } = await supabase
+                    .from('moderators')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                isModerator = !!data && !error;
+                
+                if (!isModerator) {
+                    showNotification('Доступ запрещен. Только для модераторов.', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка проверки модератора:', error);
+                isModerator = false;
+            }
+        }
+        
+        function updateUserMenu() {
+            const userMenu = document.getElementById('user-menu');
+            const firstLetter = currentUser.email[0].toUpperCase();
+            
+            userMenu.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="
+                        width: 40px;
+                        height: 40px;
+                        background: ${stringToColor(currentUser.email)};
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        color: white;
+                    ">${firstLetter}</div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: bold;">${currentUser.email.split('@')[0]}</div>
+                        <button onclick="logout()" style="
+                            background: none;
+                            border: none;
+                            color: white;
+                            font-size: 0.9rem;
+                            cursor: pointer;
+                            text-decoration: underline;
+                        ">Выйти</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Дашборд
+        async function loadDashboardData() {
+            try {
+                // Загружаем статистику
+                await loadStats();
+                
+                // Загружаем последние действия
+                await loadRecentActivity();
+                
+                // Загружаем статистику за сегодня
+                await loadTodayStats();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки дашборда:', error);
+                showNotification('Ошибка загрузки данных', 'error');
+            }
+        }
+        
+        async function loadStats() {
+            // Сайты на модерации
+            const { count: pendingCount } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending');
+            
+            // Сайты одобренные сегодня
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const { count: approvedToday } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved')
+                .gte('created_at', today.toISOString());
+            
+            // Сайты отклоненные сегодня
+            const { count: rejectedToday } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'rejected')
+                .gte('created_at', today.toISOString());
+            
+            // Всего пользователей
+            const { count: usersCount } = await supabase
+                .from('sites')
+                .select('user_id', { count: 'exact', head: true });
+            
+            document.getElementById('stat-pending').textContent = pendingCount || 0;
+            document.getElementById('stat-approved').textContent = approvedToday || 0;
+            document.getElementById('stat-rejected').textContent = rejectedToday || 0;
+            document.getElementById('stat-users').textContent = usersCount || 0;
+        }
+        
+        async function loadRecentActivity() {
+            try {
+                const { data: activities, error } = await supabase
+                    .from('sites')
+                    .select('*, auth_users!sites_user_id_fkey(email)')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                
+                if (error) throw error;
+                
+                const container = document.getElementById('recent-activity');
+                container.innerHTML = activities.map(site => `
+                    <div style="
+                        padding: 10px;
+                        border-bottom: 1px solid #eee;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    ">
+                        <div>
+                            <div style="font-weight: bold;">${site.title}</div>
+                            <div style="font-size: 0.9rem; color: #666;">
+                                ${site.auth_users?.email || 'Неизвестный пользователь'} • 
+                                ${formatDate(site.created_at)}
+                            </div>
+                        </div>
+                        <div>
+                            <span class="status-badge status-${site.status}">
+                                ${getStatusName(site.status)}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Ошибка загрузки активности:', error);
+            }
+        }
+        
+        async function loadTodayStats() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const { count: sitesAdded } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true })
+                .gte('created_at', today.toISOString());
+            
+            const { count: sitesApproved } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved')
+                .gte('created_at', today.toISOString());
+            
+            document.getElementById('today-stats').innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: bold;">➕ Добавлено: ${sitesAdded || 0}</div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: bold;">✅ Одобрено: ${sitesApproved || 0}</div>
+                </div>
+                <div>
+                    <div style="font-weight: bold;">👥 Модераторов: 1</div>
+                </div>
+            `;
+        }
+        
+        // Модерация сайтов
+        async function loadModerationSites() {
+            try {
+                const statusFilter = document.getElementById('moderation-filter').value;
+                const biomFilter = document.getElementById('biom-filter').value;
+                const searchTerm = document.getElementById('moderation-search').value.toLowerCase();
+                
+                let query = supabase
+                    .from('sites')
+                    .select('*, auth_users!sites_user_id_fkey(email)', { count: 'exact' });
+                
+                // Применяем фильтры
+                if (statusFilter !== 'all') {
+                    query = query.eq('status', statusFilter);
+                }
+                
+                if (biomFilter) {
+                    query = query.eq('category', biomFilter);
+                }
+                
+                if (searchTerm) {
+                    query = query.or(`title.ilike.%${searchTerm}%,url.ilike.%${searchTerm}%`);
+                }
+                
+                const { data: sites, error, count } = await query
+                    .order('created_at', { ascending: false })
+                    .range((moderationPage - 1) * moderationPerPage, moderationPage * moderationPerPage - 1);
+                
+                if (error) throw error;
+                
+                moderationSites = sites || [];
+                const totalSites = count || 0;
+                const totalPages = Math.ceil(totalSites / moderationPerPage);
+                
+                renderModerationSites();
+                updatePagination(totalPages);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки сайтов:', error);
+                showNotification('Ошибка загрузки сайтов', 'error');
+            }
+        }
+        
+        function renderModerationSites() {
+            const container = document.getElementById('moderation-sites');
+            
+            if (moderationSites.length === 0) {
+                container.innerHTML = `
+                    <div class="table-row" style="grid-template-columns: 1fr; text-align: center; padding: 3rem;">
+                        <div style="color: #666; font-style: italic;">
+                            Сайты не найдены
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = moderationSites.map(site => `
+                <div class="table-row">
+                    <div>
+                        <a href="${site.url}" target="_blank" class="site-url">${site.title}</a>
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">${site.url}</div>
+                    </div>
+                    <div>${getBiomName(site.category)}</div>
+                    <div>${site.auth_users?.email || 'Неизвестно'}</div>
+                    <div>
+                        <span class="status-badge status-${site.status}">
+                            ${getStatusName(site.status)}
+                        </span>
+                    </div>
+                    <div class="action-buttons">
+                        ${site.status === 'pending' ? `
+                            <button class="action-btn btn-approve" onclick="approveSite('${site.id}')">
+                                ✅
+                            </button>
+                            <button class="action-btn btn-reject" onclick="rejectSite('${site.id}')">
+                                ❌
+                            </button>
+                        ` : ''}
+                        <button class="action-btn btn-delete" onclick="deleteSiteMod('${site.id}')">
+                            🗑️
+                        </button>
+                        <button class="action-btn" onclick="previewSite('${site.id}')" style="background: var(--goose-blue); color: white;">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function filterModerationSites() {
+            moderationPage = 1;
+            loadModerationSites();
+        }
+        
+        function updatePagination(totalPages) {
+            document.getElementById('page-info').textContent = `Страница ${moderationPage} из ${totalPages}`;
+            document.getElementById('prev-page').disabled = moderationPage <= 1;
+            document.getElementById('next-page').disabled = moderationPage >= totalPages;
+        }
+        
+        function prevModerationPage() {
+            if (moderationPage > 1) {
+                moderationPage--;
+                loadModerationSites();
+            }
+        }
+        
+        function nextModerationPage() {
+            moderationPage++;
+            loadModerationSites();
+        }
+        
+        // Действия модератора
+        async function approveSite(siteId) {
+            if (!confirm('Одобрить этот сайт?')) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('sites')
+                    .update({ 
+                        status: 'approved',
+                        moderated_by: currentUser.id,
+                        moderated_at: new Date().toISOString()
+                    })
+                    .eq('id', siteId);
+                
+                if (error) throw error;
+                
+                showNotification('Сайт одобрен!', 'success');
+                await loadModerationSites();
+                await loadDashboardData();
+                
+            } catch (error) {
+                console.error('Ошибка одобрения сайта:', error);
+                showNotification('Ошибка одобрения сайта', 'error');
+            }
+        }
+        
+        async function rejectSite(siteId) {
+            const reason = prompt('Укажите причину отклонения:', 'Не соответствует правилам');
+            if (reason === null) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('sites')
+                    .update({ 
+                        status: 'rejected',
+                        moderated_by: currentUser.id,
+                        moderated_at: new Date().toISOString(),
+                        rejection_reason: reason
+                    })
+                    .eq('id', siteId);
+                
+                if (error) throw error;
+                
+                showNotification('Сайт отклонен', 'success');
+                await loadModerationSites();
+                await loadDashboardData();
+                
+            } catch (error) {
+                console.error('Ошибка отклонения сайта:', error);
+                showNotification('Ошибка отклонения сайта', 'error');
+            }
+        }
+        
+        async function deleteSiteMod(siteId) {
+            if (!confirm('Удалить сайт из базы данных? Это действие нельзя отменить.')) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('sites')
+                    .delete()
+                    .eq('id', siteId);
+                
+                if (error) throw error;
+                
+                showNotification('Сайт удален', 'success');
+                await loadModerationSites();
+                await loadDashboardData();
+                
+            } catch (error) {
+                console.error('Ошибка удаления сайта:', error);
+                showNotification('Ошибка удаления сайта', 'error');
+            }
+        }
+        
+        async function previewSite(siteId) {
+            const site = moderationSites.find(s => s.id === siteId);
+            if (!site) return;
+            
+            document.getElementById('preview-title').textContent = site.title;
+            
+            document.getElementById('site-preview-content').innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <strong>URL:</strong> <a href="${site.url}" target="_blank">${site.url}</a>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <strong>Описание:</strong> ${site.description || 'Нет описания'}
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <strong>Биом:</strong> ${getBiomName(site.category)}
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <strong>Пользователь:</strong> ${site.auth_users?.email || 'Неизвестно'}
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <strong>Дата добавления:</strong> ${formatDate(site.created_at)}
+                </div>
+                ${site.status === 'rejected' && site.rejection_reason ? `
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Причина отклонения:</strong> ${site.rejection_reason}
+                    </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('preview-actions').innerHTML = `
+                <button class="btn btn-primary" onclick="approveSite('${siteId}')">✅ Одобрить</button>
+                <button class="btn btn-secondary" onclick="rejectSite('${siteId}')">❌ Отклонить</button>
+                <button class="btn btn-secondary" onclick="closeModal('site-preview-modal')">Закрыть</button>
+            `;
+            
+            document.getElementById('site-preview-modal').style.display = 'flex';
+        }
+        
+        // Управление пользователями
+        async function loadUsers() {
+            try {
+                // Получаем пользователей с количеством их сайтов
+                const { data: usersData, error } = await supabase
+                    .from('auth.users')
+                    .select(`
+                        id,
+                        email,
+                        created_at,
+                        sites:sites(count)
+                    `)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                const container = document.getElementById('users-list');
+                
+                if (!usersData || usersData.length === 0) {
+                    container.innerHTML = `
+                        <div class="table-row" style="grid-template-columns: 1fr; text-align: center; padding: 3rem;">
+                            <div style="color: #666; font-style: italic;">
+                                Пользователи не найдены
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = usersData.map(user => `
+                    <div class="table-row">
+                        <div>
+                            <div style="font-weight: bold;">${user.email}</div>
+                            <div style="font-size: 0.8rem; color: #666;">ID: ${user.id.substring(0, 8)}...</div>
+                        </div>
+                        <div>${user.sites?.[0]?.count || 0}</div>
+                        <div>${user.email === currentUser.email ? 'Модератор' : 'Пользователь'}</div>
+                        <div>${formatDate(user.created_at)}</div>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="viewUserSites('${user.id}')" style="background: var(--goose-blue); color: white;">
+                                👁️
+                            </button>
+                            ${user.email !== currentUser.email ? `
+                                <button class="action-btn" onclick="toggleModerator('${user.id}')" style="background: var(--goose-green); color: white;">
+                                    🛡️
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Ошибка загрузки пользователей:', error);
+                showNotification('Ошибка загрузки пользователей', 'error');
+            }
+        }
+        
+        async function toggleModerator(userId) {
+            // Проверяем, является ли уже модератором
+            const { data: existing } = await supabase
+                .from('moderators')
+                .select('*')
+                .eq('user_id', userId)
+                .single();
+            
+            if (existing) {
+                // Удаляем из модераторов
+                if (confirm('Убрать права модератора?')) {
+                    await supabase
+                        .from('moderators')
+                        .delete()
+                        .eq('user_id', userId);
+                    
+                    showNotification('Права модератора убраны', 'success');
+                    await loadUsers();
+                }
+            } else {
+                // Добавляем в модераторы
+                if (confirm('Дать права модератора?')) {
+                    await supabase
+                        .from('moderators')
+                        .insert([{
+                            user_id: userId,
+                            added_by: currentUser.id
+                        }]);
+                    
+                    showNotification('Права модератора выданы', 'success');
+                    await loadUsers();
+                }
+            }
+        }
+        
+        // Аналитика
+        async function loadAnalytics() {
+            try {
+                // Статистика по биомам
+                const { data: biomsStats } = await supabase
+                    .from('sites')
+                    .select('category')
+                    .eq('status', 'approved');
+                
+                // Статистика по дням (последние 7 дней)
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                
+                const { data: growthStats } = await supabase
+                    .from('sites')
+                    .select('created_at')
+                    .gte('created_at', sevenDaysAgo.toISOString())
+                    .order('created_at', { ascending: true });
+                
+                updateAnalyticsCharts(biomsStats, growthStats);
+                loadDetailedStats();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки аналитики:', error);
+            }
+        }
+        
+        function updateAnalyticsCharts(biomsStats, growthStats) {
+            // График биомов
+            if (biomsStats) {
+                const biomsCount = {};
+                biomsStats.forEach(site => {
+                    biomsCount[site.category] = (biomsCount[site.category] || 0) + 1;
+                });
+                
+                const biomsChart = new Chart(document.getElementById('biomsChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(biomsCount).map(getBiomName),
+                        datasets: [{
+                            data: Object.values(biomsCount),
+                            backgroundColor: [
+                                '#ffcc00',
+                                '#8b4513',
+                                '#2e8b57',
+                                '#4682b4'
+                            ]
+                        }]
+                    }
+                });
+            }
+            
+            // График роста
+            if (growthStats) {
+                const growthByDay = {};
+                growthStats.forEach(site => {
+                    const date = new Date(site.created_at).toLocaleDateString();
+                    growthByDay[date] = (growthByDay[date] || 0) + 1;
+                });
+                
+                const growthChart = new Chart(document.getElementById('growthChart'), {
+                    type: 'line',
+                    data: {
+                        labels: Object.keys(growthByDay),
+                        datasets: [{
+                            label: 'Новых сайтов',
+                            data: Object.values(growthByDay),
+                            borderColor: '#ffcc00',
+                            backgroundColor: 'rgba(255, 204, 0, 0.1)'
+                        }]
+                    }
+                });
+            }
+        }
+        
+        async function loadDetailedStats() {
+            // Общая статистика
+            const { count: totalSites } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true });
+            
+            const { count: approvedSites } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved');
+            
+            const { count: pendingSites } = await supabase
+                .from('sites')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending');
+            
+            document.getElementById('detailed-stats').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--goose-brown);">${totalSites || 0}</div>
+                    <div>Всего сайтов</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--goose-green);">${approvedSites || 0}</div>
+                    <div>Одобрено</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--goose-yellow);">${pendingSites || 0}</div>
+                    <div>На модерации</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--goose-blue);">
+                        ${Math.round((approvedSites / totalSites) * 100) || 0}%
+                    </div>
+                    <div>Процент одобрения</div>
+                </div>
+            `;
+        }
+        
+        // Навигация по разделам
+        function showSection(sectionId) {
+            // Скрываем все разделы
+            document.querySelectorAll('.dashboard-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Показываем выбранный раздел
+            document.getElementById(`${sectionId}-section`).style.display = 'block';
+            
+            // Обновляем активную ссылку в сайдбаре
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Загружаем данные для раздела
+            switch(sectionId) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'moderation':
+                    loadModerationSites();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+            }
+        }
+        
+        // Быстрые действия
+        function showPendingSites() {
+            showSection('moderation');
+            document.getElementById('moderation-filter').value = 'pending';
+            filterModerationSites();
+        }
+        
+        function showAddModeratorModal() {
+            document.getElementById('add-moderator-modal').style.display = 'flex';
+        }
+        
+        function closeAddModeratorModal() {
+            document.getElementById('add-moderator-modal').style.display = 'none';
+            document.getElementById('add-moderator-form').reset();
+        }
+        
+        async function addModerator(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('moderator-email').value;
+            const level = document.getElementById('moderator-level').value;
+            
+            try {
+                // Находим пользователя по email
+                const { data: users } = await supabase.auth.admin.listUsers();
+                const user = users.users.find(u => u.email === email);
+                
+                if (!user) {
+                    showNotification('Пользователь не найден', 'error');
+                    return;
+                }
+                
+                // Добавляем в таблицу модераторов
+                await supabase
+                    .from('moderators')
+                    .insert([{
+                        user_id: user.id,
+                        level: level,
+                        added_by: currentUser.id
+                    }]);
+                
+                showNotification('Модератор добавлен', 'success');
+                closeAddModeratorModal();
+                
+            } catch (error) {
+                console.error('Ошибка добавления модератора:', error);
+                showNotification('Ошибка добавления модератора', 'error');
+            }
+        }
+        
+        function exportData() {
+            // Экспорт данных в CSV
+            const data = [
+                ['ID', 'Название', 'URL', 'Биом', 'Статус', 'Пользователь', 'Дата'],
+                ...moderationSites.map(site => [
+                    site.id,
+                    site.title,
+                    site.url,
+                    getBiomName(site.category),
+                    getStatusName(site.status),
+                    site.auth_users?.email || '',
+                    site.created_at
+                ])
+            ];
+            
+            const csv = data.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `goosenet-export-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            
+            showNotification('Данные экспортированы', 'success');
+        }
+        
+        // Вспомогательные функции
+        function getBiomName(category) {
+            const bioms = {
+                swamp: '🦢 Болото',
+                tech: '💻 Техноболото',
+                art: '🎨 Искусство',
+                nature: '🌿 Природа'
+            };
+            return bioms[category] || category;
+        }
+        
+        function getStatusName(status) {
+            const statuses = {
+                pending: '⏳ Ожидает',
+                approved: '✅ Одобрен',
+                rejected: '❌ Отклонен'
+            };
+            return statuses[status] || status;
+        }
+        
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('ru-RU');
+        }
+        
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return `hsl(${hash % 360}, 70%, 65%)`;
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = 'index.html';
+        }
+        
+        // Графики
+        function setupCharts() {
+            // Инициализация графиков при загрузке
+            setTimeout(() => {
+                loadAnalytics();
+            }, 1000);
+        }
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
