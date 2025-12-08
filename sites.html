@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление сайтами | Гусиный Интернет</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        /* ... стили как в index.html ... */
+        
+        .sites-manager {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .manager-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .site-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .site-filter-btn {
+            padding: 8px 20px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .site-filter-btn.active {
+            background: var(--goose-yellow);
+            border-color: var(--goose-yellow);
+            font-weight: bold;
+        }
+        
+        .sites-table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
+            background: var(--goose-yellow);
+            padding: 1rem;
+            font-weight: bold;
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        
+        .table-row:hover {
+            background: #f9f9f9;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .btn-edit {
+            background: var(--goose-blue);
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .add-site-form {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+            border: 2px solid var(--goose-green);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .table-header,
+            .table-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .action-buttons {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-container">
+            <div class="logo">
+                <span>🦢</span>
+                <span>Гусиный Интернет</span>
+            </div>
+            
+            <nav class="nav-links">
+                <a href="index.html" class="nav-link">🏠 Поиск</a>
+                <a href="profile.html" class="nav-link">👤 Профиль</a>
+                <a href="sites.html" class="nav-link">🌐 Мои сайты</a>
+                <a href="generator.html" class="nav-link">🛠️ Создать сайт</a>
+            </nav>
+            
+            <div class="user-menu" id="user-menu">
+                <!-- Динамически заполняется -->
+            </div>
+        </div>
+    </header>
+
+    <div class="sites-manager">
+        <div class="manager-header">
+            <h1 style="color: var(--goose-brown);">🌐 Управление сайтами</h1>
+            <button class="btn-primary" onclick="showAddSiteForm()">+ Добавить сайт</button>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="site-filters">
+            <button class="site-filter-btn active" onclick="filterSites('all')">Все сайты</button>
+            <button class="site-filter-btn" onclick="filterSites('approved')">Одобренные</button>
+            <button class="site-filter-btn" onclick="filterSites('pending')">На модерации</button>
+            <button class="site-filter-btn" onclick="filterSites('rejected')">Отклоненные</button>
+        </div>
+
+        <!-- Таблица сайтов -->
+        <div class="sites-table">
+            <div class="table-header">
+                <div>Название сайта</div>
+                <div>Биом</div>
+                <div>Статус</div>
+                <div>Дата добавления</div>
+                <div>Действия</div>
+            </div>
+            
+            <div id="sites-list">
+                <!-- Сайты загружаются динамически -->
+            </div>
+        </div>
+
+        <!-- Форма добавления сайта -->
+        <div class="add-site-form" id="add-site-form" style="display: none;">
+            <h2>Добавить новый сайт в Гусиный Интернет</h2>
+            <form id="new-site-form" onsubmit="addNewSite(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">URL сайта *</label>
+                        <input type="url" class="form-input" id="site-url" required 
+                               placeholder="https://example.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Название сайта *</label>
+                        <input type="text" class="form-input" id="site-title" required
+                               placeholder="Мой крутой сайт">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Биом *</label>
+                        <select class="form-input" id="site-category" required>
+                            <option value="">Выберите биом</option>
+                            <option value="swamp">🦢 Болото (блоги, философия)</option>
+                            <option value="tech">💻 Техноболото (код, технологии)</option>
+                            <option value="art">🎨 Искусство (арт, музыка)</option>
+                            <option value="nature">🌿 Природа (экология, животные)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Описание сайта</label>
+                    <textarea class="form-input" id="site-description" rows="3"
+                              placeholder="Расскажите о вашем сайте..."></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn-primary">Добавить сайт</button>
+                    <button type="button" class="btn-secondary" onclick="hideAddSiteForm()">Отмена</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Модалка для редактирования -->
+        <div class="modal" id="edit-modal">
+            <div class="modal-content">
+                <h2>Редактировать сайт</h2>
+                <form id="edit-site-form" onsubmit="saveSiteEdit(event)">
+                    <input type="hidden" id="edit-site-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Название сайта</label>
+                        <input type="text" class="form-input" id="edit-site-title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-input" id="edit-site-description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Биом</label>
+                        <select class="form-input" id="edit-site-category" required>
+                            <option value="swamp">🦢 Болото</option>
+                            <option value="tech">💻 Техноболото</option>
+                            <option value="art">🎨 Искусство</option>
+                            <option value="nature">🌿 Природа</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="submit" class="btn-primary">Сохранить</button>
+                        <button type="button" class="btn-secondary" onclick="closeEditModal()">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://uvhtwedzxejuwiaofavk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aHR3ZWR6eGVqdXdpYW9mYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDA3MjgsImV4cCI6MjA4MDcxNjcyOH0.9l4Xlj4CwRJS9Q3cT-pK9udW25-ptewrozUDbLgTjUM';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let currentUser = null;
+        let userSites = [];
+        let currentFilter = 'all';
+        
+        async function init() {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            currentUser = user;
+            updateUserMenu();
+            await loadUserSites();
+        }
+        
+        function updateUserMenu() {
+            const userMenu = document.getElementById('user-menu');
+            const firstLetter = currentUser.email[0].toUpperCase();
+            
+            userMenu.innerHTML = `
+                <div class="user-avatar" style="background: ${stringToColor(currentUser.email)}">
+                    ${firstLetter}
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: bold;">${currentUser.email.split('@')[0]}</div>
+                    <button onclick="logout()" style="
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 0.9rem;
+                        cursor: pointer;
+                        text-decoration: underline;
+                    ">Выйти</button>
+                </div>
+            `;
+        }
+        
+        async function loadUserSites() {
+            try {
+                const { data: sites, error } = await supabase
+                    .from('sites')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                userSites = sites || [];
+                renderSitesTable();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки сайтов:', error);
+                showError('Не удалось загрузить сайты');
+            }
+        }
+        
+        function renderSitesTable() {
+            const container = document.getElementById('sites-list');
+            const filteredSites = filterSitesList(userSites);
+            
+            if (filteredSites.length === 0) {
+                container.innerHTML = `
+                    <div class="table-row" style="grid-template-columns: 1fr; text-align: center; padding: 3rem;">
+                        <div style="color: #666; font-style: italic;">
+                            ${getEmptyMessage()}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = filteredSites.map(site => `
+                <div class="table-row">
+                    <div>
+                        <div style="font-weight: bold;">${site.title}</div>
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">${site.url}</div>
+                    </div>
+                    <div>${getCategoryName(site.category)}</div>
+                    <div>
+                        <span class="status-badge status-${site.status}">
+                            ${getStatusName(site.status)}
+                        </span>
+                    </div>
+                    <div>${formatDate(site.created_at)}</div>
+                    <div class="action-buttons">
+                        ${site.status === 'pending' || site.status === 'rejected' ? `
+                            <button class="action-btn btn-edit" onclick="editSite('${site.id}')">
+                                ✏️
+                            </button>
+                        ` : ''}
+                        <button class="action-btn btn-delete" onclick="deleteSite('${site.id}')">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function filterSitesList(sites) {
+            if (currentFilter === 'all') return sites;
+            return sites.filter(site => site.status === currentFilter);
+        }
+        
+        function filterSites(filter) {
+            currentFilter = filter;
+            
+            // Обновляем кнопки фильтров
+            document.querySelectorAll('.site-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderSitesTable();
+        }
+        
+        function getEmptyMessage() {
+            switch (currentFilter) {
+                case 'all': return 'У вас пока нет сайтов. Добавьте первый сайт!';
+                case 'approved': return 'Нет одобренных сайтов';
+                case 'pending': return 'Нет сайтов на модерации';
+                case 'rejected': return 'Нет отклоненных сайтов';
+                default: return 'Сайты не найдены';
+            }
+        }
+        
+        // Добавление сайта
+        function showAddSiteForm() {
+            document.getElementById('add-site-form').style.display = 'block';
+            document.getElementById('site-url').focus();
+        }
+        
+        function hideAddSiteForm() {
+            document.getElementById('add-site-form').style.display = 'none';
+            document.getElementById('new-site-form').reset();
+        }
+        
+        async function addNewSite(event) {
+            event.preventDefault();
+            
+            const url = document.getElementById('site-url').value;
+            const title = document.getElementById('site-title').value;
+            const category = document.getElementById('site-category').value;
+            const description = document.getElementById('site-description').value;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('sites')
+                    .insert([{
+                        url,
+                        title,
+                        category,
+                        description,
+                        user_id: currentUser.id,
+                        status: 'pending'
+                    }])
+                    .select();
+                
+                if (error) throw error;
+                
+                alert('Сайт добавлен и отправлен на модерацию!');
+                hideAddSiteForm();
+                await loadUserSites();
+                
+            } catch (error) {
+                console.error('Ошибка добавления сайта:', error);
+                alert('Ошибка: ' + error.message);
+            }
+        }
+        
+        // Редактирование сайта
+        let editingSiteId = null;
+        
+        function editSite(siteId) {
+            const site = userSites.find(s => s.id === siteId);
+            if (!site) return;
+            
+            editingSiteId = siteId;
+            
+            document.getElementById('edit-site-id').value = siteId;
+            document.getElementById('edit-site-title').value = site.title;
+            document.getElementById('edit-site-description').value = site.description || '';
+            document.getElementById('edit-site-category').value = site.category;
+            
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+            editingSiteId = null;
+            document.getElementById('edit-site-form').reset();
+        }
+        
+        async function saveSiteEdit(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('edit-site-title').value;
+            const description = document.getElementById('edit-site-description').value;
+            const category = document.getElementById('edit-site-category').value;
+            
+            try {
+                const { error } = await supabase
+                    .from('sites')
+                    .update({
+                        title,
+                        description,
+                        category,
+                        status: 'pending' // При редактировании отправляем на повторную модерацию
+                    })
+                    .eq('id', editingSiteId)
+                    .eq('user_id', currentUser.id);
+                
+                if (error) throw error;
+                
+                alert('Изменения сохранены! Сайт отправлен на повторную модерацию.');
+                closeEditModal();
+                await loadUserSites();
+                
+            } catch (error) {
+                console.error('Ошибка редактирования сайта:', error);
+                alert('Ошибка: ' + error.message);
+            }
+        }
+        
+        // Удаление сайта
+        async function deleteSite(siteId) {
+            if (!confirm('Удалить сайт из каталога? Это действие нельзя отменить.')) {
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('sites')
+                    .delete()
+                    .eq('id', siteId)
+                    .eq('user_id', currentUser.id);
+                
+                if (error) throw error;
+                
+                alert('Сайт удален');
+                await loadUserSites();
+                
+            } catch (error) {
+                console.error('Ошибка удаления сайта:', error);
+                alert('Ошибка: ' + error.message);
+            }
+        }
+        
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = 'index.html';
+        }
+        
+        // Вспомогательные функции
+        function getCategoryName(category) {
+            const categories = {
+                swamp: '🦢 Болото',
+                tech: '💻 Техноболото',
+                art: '🎨 Искусство',
+                nature: '🌿 Природа'
+            };
+            return categories[category] || category;
+        }
+        
+        function getStatusName(status) {
+            const statuses = {
+                pending: '⏳ На модерации',
+                approved: '✅ Одобрен',
+                rejected: '❌ Отклонен'
+            };
+            return statuses[status] || status;
+        }
+        
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('ru-RU');
+        }
+        
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return `hsl(${hash % 360}, 70%, 65%)`;
+        }
+        
+        function showError(message) {
+            alert(message);
+        }
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
