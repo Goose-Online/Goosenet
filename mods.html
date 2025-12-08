@@ -820,8 +820,7 @@
                     </div>
                 </div>
             `;
-        }
-        
+        }    
         // Дашборд
         async function loadDashboardData() {
             try {
@@ -876,7 +875,6 @@
         
         async function loadRecentActivity() {
     try {
-        // Сначала получаем сайты
         const { data: activities, error } = await supabase
             .from('sites')
             .select('*')
@@ -885,12 +883,21 @@
         
         if (error) throw error;
         
-        // Получаем пользователей отдельно
-        const { data: { users } } = await supabase.auth.admin.listUsers();
+        // Получаем user_id из сайтов
+        const userIds = [...new Set(activities.map(site => site.user_id))];
+        
+        // Запрашиваем email через функцию (её создадим в БД)
+        const { data: usersData } = await supabase
+            .rpc('get_users_info', { user_ids: userIds })
+            .catch(() => ({ data: [] }));
+        
+        // Создаем маппинг userId -> email
         const usersMap = {};
-        users.forEach(user => {
-            usersMap[user.id] = user.email;
-        });
+        if (usersData) {
+            usersData.forEach(user => {
+                usersMap[user.id] = user.email;
+            });
+        }
         
         const container = document.getElementById('recent-activity');
         container.innerHTML = activities.map(site => `
@@ -904,7 +911,7 @@
                 <div>
                     <div style="font-weight: bold;">${site.title}</div>
                     <div style="font-size: 0.9rem; color: #666;">
-                        ${usersMap[site.user_id] || 'Неизвестный пользователь'} • 
+                        ${usersMap[site.user_id] || `Пользователь ${site.user_id.substring(0, 8)}...`} • 
                         ${formatDate(site.created_at)}
                     </div>
                 </div>
@@ -918,6 +925,7 @@
         
     } catch (error) {
         console.error('Ошибка загрузки активности:', error);
+        showNotification('Ошибка загрузки последних действий', 'error');
     }
 }
 
@@ -951,7 +959,7 @@
         }
         
         // Модерация сайтов
-        async function loadModerationSites() {
+       async function loadModerationSites() {
     try {
         const statusFilter = document.getElementById('moderation-filter').value;
         const biomFilter = document.getElementById('biom-filter').value;
@@ -961,7 +969,6 @@
             .from('sites')
             .select('*', { count: 'exact' });
         
-        // Применяем фильтры
         if (statusFilter !== 'all') {
             query = query.eq('status', statusFilter);
         }
@@ -981,15 +988,21 @@
         if (error) throw error;
         
         // Получаем email пользователей
-        const { data: { users } } = await supabase.auth.admin.listUsers();
+        const userIds = [...new Set(sites.map(site => site.user_id))];
+        const { data: usersData } = await supabase
+            .rpc('get_users_info', { user_ids: userIds })
+            .catch(() => ({ data: [] }));
+        
         const usersMap = {};
-        users.forEach(user => {
-            usersMap[user.id] = user.email;
-        });
+        if (usersData) {
+            usersData.forEach(user => {
+                usersMap[user.id] = user.email;
+            });
+        }
         
         moderationSites = (sites || []).map(site => ({
             ...site,
-            user_email: usersMap[site.user_id] || 'Неизвестно'
+            user_email: usersMap[site.user_id] || `Пользователь ${site.user_id.substring(0, 8)}...`
         }));
         
         const totalSites = count || 0;
@@ -1189,40 +1202,65 @@
         // Управление пользователями
         async function loadUsers() {
     try {
-        // Получаем пользователей через auth API
-        const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
-        
-        if (usersError) throw usersError;
-        
-        // Получаем статистику по сайтам для каждого пользователя
+        // Загружаем всех пользователей, которые добавили сайты
         const { data: sitesData, error: sitesError } = await supabase
             .from('sites')
-            .select('user_id, status');
+            .select('user_id, status, created_at');
         
         if (sitesError) throw sitesError;
         
-        // Считаем статистику
+        // Группируем по пользователям
         const userStats = {};
+        const userLastActivity = {};
+        
         sitesData.forEach(site => {
-            if (!userStats[site.user_id]) {
-                userStats[site.user_id] = {
+            const userId = site.user_id;
+            
+            // Статистика
+            if (!userStats[userId]) {
+                userStats[userId] = {
                     total: 0,
                     approved: 0,
                     pending: 0,
                     rejected: 0
                 };
             }
-            userStats[site.user_id].total++;
+            userStats[userId].total++;
             
-            if (site.status === 'approved') userStats[site.user_id].approved++;
-            if (site.status === 'pending') userStats[site.user_id].pending++;
-            if (site.status === 'rejected') userStats[site.user_id].rejected++;
+            if (site.status === 'approved') userStats[userId].approved++;
+            if (site.status === 'pending') userStats[userId].pending++;
+            if (site.status === 'rejected') userStats[userId].rejected++;
+            
+            // Последняя активность
+            if (!userLastActivity[userId] || new Date(site.created_at) > new Date(userLastActivity[userId])) {
+                userLastActivity[userId] = site.created_at;
+            }
         });
         
+        // Получаем уникальные ID пользователей
+        const userIds = Object.keys(userStats);
+        
+        if (userIds.length === 0) {
+            document.getElementById('users-list').innerHTML = `
+                <div class="table-row" style="grid-template-columns: 1fr; text-align: center; padding: 3rem;">
+                    <div style="color: #666; font-style: italic;">
+                        Пользователи не найдены
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Получаем email через функцию
+        const { data: usersData } = await supabase
+            .rpc('get_users_info', { user_ids: userIds })
+            .catch(() => ({ data: [] }));
+        
         // Получаем список модераторов
-        const { data: moderators, error: modError } = await supabase
+        const { data: moderators } = await supabase
             .from('moderators')
-            .select('user_id, level');
+            .select('user_id, level')
+            .catch(() => ({ data: [] }));
         
         const moderatorMap = {};
         if (moderators) {
@@ -1233,21 +1271,11 @@
         
         const container = document.getElementById('users-list');
         
-        if (!users || users.length === 0) {
-            container.innerHTML = `
-                <div class="table-row" style="grid-template-columns: 1fr; text-align: center; padding: 3rem;">
-                    <div style="color: #666; font-style: italic;">
-                        Пользователи не найдены
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = users.map(user => {
+        container.innerHTML = usersData.map(user => {
             const stats = userStats[user.id] || { total: 0, approved: 0, pending: 0, rejected: 0 };
             const isModerator = !!moderatorMap[user.id];
             const modLevel = moderatorMap[user.id];
+            const lastActivity = userLastActivity[user.id];
             
             return `
                 <div class="table-row">
@@ -1269,13 +1297,13 @@
                             '👤 Пользователь'
                         }
                     </div>
-                    <div>${formatDate(user.created_at)}</div>
+                    <div>${lastActivity ? formatDate(lastActivity) : 'Нет активности'}</div>
                     <div class="action-buttons">
                         <button class="action-btn" onclick="viewUserSites('${user.id}', '${user.email}')" 
                                 style="background: var(--goose-blue); color: white;">
                             👁️
                         </button>
-                        ${user.email !== currentUser.email ? `
+                        ${user.id !== currentUser.id ? `
                             <button class="action-btn" onclick="toggleModerator('${user.id}', '${user.email}', ${isModerator})" 
                                     style="background: ${isModerator ? 'var(--goose-red)' : 'var(--goose-green)'}; color: white;">
                                 ${isModerator ? '🗑️' : '🛡️'}
@@ -1528,8 +1556,6 @@
         showNotification('Ошибка загрузки сайтов пользователя', 'error');
     }
 }
-
-// 8. Обнови функцию addModerator():
 async function addModerator(event) {
     event.preventDefault();
     
@@ -1537,15 +1563,27 @@ async function addModerator(event) {
     const level = document.getElementById('moderator-level').value;
     
     try {
-        // Находим пользователя через auth API
-        const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
+        // Ищем пользователя по email через таблицу sites
+        const { data: sites } = await supabase
+            .from('sites')
+            .select('user_id')
+            .limit(1);
         
-        if (usersError) throw usersError;
+        if (!sites || sites.length === 0) {
+            showNotification('Сначала пользователь должен добавить хотя бы один сайт', 'error');
+            return;
+        }
         
-        const user = users.find(u => u.email === email);
+        // Получаем всех пользователей с сайтами
+        const userIds = [...new Set(sites.map(site => site.user_id))];
+        const { data: usersData } = await supabase
+            .rpc('get_users_info', { user_ids: userIds })
+            .catch(() => ({ data: [] }));
+        
+        const user = usersData?.find(u => u.email === email);
         
         if (!user) {
-            showNotification('Пользователь не найден', 'error');
+            showNotification('Пользователь не найден. Он должен сначала добавить сайт.', 'error');
             return;
         }
         
@@ -1554,14 +1592,15 @@ async function addModerator(event) {
             .from('moderators')
             .select('*')
             .eq('user_id', user.id)
-            .single();
+            .single()
+            .catch(() => ({ data: null }));
         
         if (existing) {
             showNotification('Пользователь уже является модератором', 'error');
             return;
         }
         
-        // Добавляем в таблицу модераторов
+        // Добавляем модератора
         const { error } = await supabase
             .from('moderators')
             .insert([{
@@ -1576,6 +1615,11 @@ async function addModerator(event) {
         
         showNotification(`Модератор ${level === 'admin' ? '👑 Администратор' : '🛡️ Модератор'} добавлен`, 'success');
         closeAddModeratorModal();
+        
+        // Обновляем список пользователей если открыт
+        if (document.getElementById('users-section').style.display !== 'none') {
+            await loadUsers();
+        }
         
     } catch (error) {
         console.error('Ошибка добавления модератора:', error);
