@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой профиль | Гусиный Интернет</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+       :root {
+            --goose-yellow: #ffcc00;
+            --goose-brown: #8b4513;
+            --goose-green: #2e8b57;
+            --goose-blue: #4682b4;
+            --goose-light: #f9f3e9;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--goose-light);
+            color: #333;
+        }
+        
+        /* Header */
+        .main-header {
+            background: linear-gradient(90deg, var(--goose-yellow), var(--goose-brown));
+            color: white;
+            padding: 1.5rem 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: background 0.3s;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--goose-brown);
+        }
+        
+        /* Поиск */
+        .search-section {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .search-box {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: 2px solid var(--goose-yellow);
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--goose-yellow);
+        }
+        
+        .search-btn {
+            background: var(--goose-yellow);
+            color: #333;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .search-btn:hover {
+            background: #ffd633;
+            transform: scale(1.05);
+        }
+        
+        /* Фильтры */
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .filter-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn.active {
+            background: var(--goose-yellow);
+            border-color: var(--goose-yellow);
+            font-weight: bold;
+        }
+        
+        /* Список сайтов */
+        .sites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .site-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .site-card:hover {
+            border-color: var(--goose-yellow);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(255, 204, 0, 0.1);
+        }
+        
+        .site-category {
+            display: inline-block;
+            background: var(--goose-yellow);
+            color: #333;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .site-title {
+            color: var(--goose-brown);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .site-description {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .site-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #999;
+        }
+        
+        /* Статистика */
+        .stats-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 1200px;
+            border: 2px solid var(--goose-green);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-item {
+            padding: 1.5rem;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--goose-brown);
+            display: block;
+        }
+        
+        /* Пагинация */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 2rem 0;
+        }
+        
+        .page-btn {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .page-btn.active {
+            background: var(--goose-yellow);
+            border-color: var(--goose-yellow);
+            font-weight: bold;
+        }
+        
+        /* Футер */
+        .main-footer {
+            background: var(--goose-brown);
+            color: white;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .search-form {
+                flex-direction: column;
+            }
+            
+            .sites-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .profile-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .profile-header-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: 3px solid var(--goose-yellow);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .profile-avatar-large {
+            width: 120px;
+            height: 120px;
+            background: var(--goose-yellow);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--goose-brown);
+        }
+        
+        .profile-info {
+            flex: 1;
+        }
+        
+        .profile-name {
+            font-size: 2rem;
+            color: var(--goose-brown);
+            margin-bottom: 0.5rem;
+        }
+        
+        .profile-email {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .profile-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--goose-green);
+            display: block;
+        }
+        
+        /* Табы */
+        .profile-tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background: #f5f5f5;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: white;
+            color: var(--goose-brown);
+            border-bottom: 3px solid var(--goose-yellow);
+        }
+        
+        .tab-content {
+            background: white;
+            border-radius: 0 0 10px 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        /* Форма редактирования */
+        .edit-form {
+            display: grid;
+            gap: 1rem;
+            max-width: 500px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--goose-yellow);
+        }
+        
+        .btn-primary {
+            background: var(--goose-yellow);
+            color: #333;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #ffd633;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: var(--goose-brown);
+            border: 2px solid var(--goose-yellow);
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--goose-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header такой же как в index.html -->
+    <header class="main-header">
+        <div class="header-container">
+            <div class="logo">
+                <span>🦢</span>
+                <span>Гусиный Интернет</span>
+            </div>
+            
+            <nav class="nav-links">
+                <a href="index.html" class="nav-link">🏠 Поиск</a>
+                <a href="profile.html" class="nav-link">👤 Профиль</a>
+                <a href="sites.html" class="nav-link">🌐 Мои сайты</a>
+                <a href="generator.html" class="nav-link">🛠️ Создать сайт</a>
+            </nav>
+            
+            <div class="user-menu" id="user-menu">
+                <!-- Динамически заполняется -->
+            </div>
+        </div>
+    </header>
+
+    <div class="profile-container">
+        <!-- Шапка профиля -->
+        <div class="profile-header-card" id="profile-header">
+            <div class="profile-avatar-large" id="profile-avatar">Г</div>
+            <div class="profile-info">
+                <h1 class="profile-name" id="profile-name">Загрузка...</h1>
+                <p class="profile-email" id="profile-email"></p>
+                <div class="profile-stats">
+                    <div class="stat">
+                        <span class="stat-number" id="stat-sites">0</span>
+                        <span>сайтов</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="stat-days">0</span>
+                        <span>дней в Гуснете</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="stat-activity">0</span>
+                        <span>активность</span>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-secondary" onclick="editProfile()">✏️ Редактировать</button>
+        </div>
+
+        <!-- Табы -->
+        <div class="profile-tabs">
+            <button class="tab active" onclick="switchTab('info')">📊 Информация</button>
+            <button class="tab" onclick="switchTab('sites')">🌐 Мои сайты</button>
+            <button class="tab" onclick="switchTab('activity')">📈 Активность</button>
+            <button class="tab" onclick="switchTab('settings')">⚙️ Настройки</button>
+        </div>
+
+        <!-- Контент табов -->
+        <div class="tab-content" id="tab-info">
+            <h2>Основная информация</h2>
+            <div id="profile-details">
+                <!-- Динамически заполняется -->
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-sites" style="display: none;">
+            <h2>Мои сайты в Гусином Интернете</h2>
+            <div id="profile-sites-list">
+                <!-- Динамически заполняется -->
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-activity" style="display: none;">
+            <h2>История активности</h2>
+            <div id="activity-log">
+                <!-- Динамически заполняется -->
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-settings" style="display: none;">
+            <h2>Настройки профиля</h2>
+            <form class="edit-form" id="settings-form" onsubmit="saveSettings(event)">
+                <div class="form-group">
+                    <label class="form-label">Имя для отображения</label>
+                    <input type="text" class="form-input" id="display-name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">О себе</label>
+                    <textarea class="form-input" id="bio" rows="4"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Ссылка на аватар</label>
+                    <input type="url" class="form-input" id="avatar-url" placeholder="https://...">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Уведомления</label>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" id="notify-email"> Email уведомления
+                        </label>
+                        <label style="display: block;">
+                            <input type="checkbox" id="notify-site-updates"> Обновления сайтов
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary">Сохранить изменения</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://uvhtwedzxejuwiaofavk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aHR3ZWR6eGVqdXdpYW9mYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDA3MjgsImV4cCI6MjA4MDcxNjcyOH0.9l4Xlj4CwRJS9Q3cT-pK9udW25-ptewrozUDbLgTjUM';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let currentUser = null;
+        let userSites = [];
+        
+        async function loadProfile() {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            currentUser = user;
+            updateProfileUI();
+            await loadUserSites();
+            await loadUserActivity();
+        }
+        
+        function updateProfileUI() {
+            // Аватар и имя
+            const firstLetter = currentUser.email[0].toUpperCase();
+            document.getElementById('profile-avatar').textContent = firstLetter;
+            document.getElementById('profile-avatar').style.background = stringToColor(currentUser.email);
+            document.getElementById('profile-name').textContent = currentUser.email.split('@')[0];
+            document.getElementById('profile-email').textContent = currentUser.email;
+            
+            // Обновляем header
+            const userMenu = document.getElementById('user-menu');
+            userMenu.innerHTML = `
+                <div class="user-avatar" style="background: ${stringToColor(currentUser.email)}">
+                    ${firstLetter}
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: bold;">${currentUser.email.split('@')[0]}</div>
+                    <button onclick="logout()" style="
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 0.9rem;
+                        cursor: pointer;
+                        text-decoration: underline;
+                    ">Выйти</button>
+                </div>
+            `;
+            
+            // Статистика
+            document.getElementById('stat-sites').textContent = userSites.length;
+            
+            const daysInGooseNet = Math.floor((Date.now() - new Date(currentUser.created_at).getTime()) / (86400000));
+            document.getElementById('stat-days').textContent = daysInGooseNet;
+            
+            // Основная информация
+            document.getElementById('profile-details').innerHTML = `
+                <p><strong>Email:</strong> ${currentUser.email}</p>
+                <p><strong>Дата регистрации:</strong> ${new Date(currentUser.created_at).toLocaleDateString('ru-RU')}</p>
+                <p><strong>Статус:</strong> ${userSites.length > 0 ? 'Активный участник' : 'Новый пользователь'}</p>
+                <p><strong>Биомы:</strong> ${getUserBioms()}</p>
+            `;
+            
+            // Настройки формы
+            document.getElementById('display-name').value = currentUser.email.split('@')[0];
+        }
+        
+        async function loadUserSites() {
+            const { data: sites } = await supabase
+                .from('sites')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false });
+            
+            userSites = sites || [];
+            updateSitesTab();
+        }
+        
+        function updateSitesTab() {
+            const container = document.getElementById('profile-sites-list');
+            
+            if (userSites.length === 0) {
+                container.innerHTML = `
+                    <p style="color: #666; font-style: italic;">У вас пока нет сайтов в Гусином Интернете.</p>
+                    <a href="sites.html" class="btn-primary" style="display: inline-block;margin-top: 1rem;">
+                        Добавить первый сайт
+                    </a>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;">
+                    <span>Найдено сайтов: ${userSites.length}</span>
+                    <a href="sites.html" class="btn-secondary">Управление сайтами</a>
+                </div>
+                <div style="display: grid; gap: 1rem;">
+                    ${userSites.map(site => `
+                        <div style="
+                            padding: 1rem;
+                            border: 2px solid #eee;
+                            border-radius: 10px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        ">
+                            <div>
+                                <div style="font-weight: bold;">${site.title}</div>
+                                <div style="font-size: 0.9rem; color: #666;">${site.url}</div>
+                                <div style="margin-top: 5px;">
+                                    <span style="
+                                        background: #f0f0f0;
+                                        padding: 2px 10px;
+                                        border-radius: 15px;
+                                        font-size: 0.8rem;
+                                    ">${getCategoryName(site.category)}</span>
+                                    <span style="margin-left: 10px; font-size: 0.8rem; color: #666;">
+                                        ${site.status === 'pending' ? '⏳ На модерации' : 
+                                          site.status === 'approved' ? '✅ Одобрен' : '❌ Отклонен'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <button onclick="window.open('${site.url}', '_blank')" class="btn-secondary" style="padding: 5px 15px;">
+                                    Открыть
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        async function loadUserActivity() {
+            // Здесь можно загрузить активность пользователя
+            // Пока просто покажем пример
+            document.getElementById('activity-log').innerHTML = `
+                <div style="color: #666; font-style: italic;">
+                    История активности будет доступна в следующих версиях.
+                </div>
+            `;
+        }
+        
+        function getUserBioms() {
+            const bioms = [...new Set(userSites.map(site => site.category))];
+            const biomNames = {
+                swamp: '🦢 Болото',
+                tech: '💻 Техноболото',
+                art: '🎨 Искусство',
+                nature: '🌿 Природа'
+            };
+            return bioms.map(b => biomNames[b] || b).join(', ') || 'Еще не выбраны';
+        }
+        
+        function switchTab(tabName) {
+            // Обновляем табы
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Показываем контент
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById(`tab-${tabName}`).style.display = 'block';
+        }
+        
+        function editProfile() {
+            switchTab('settings');
+        }
+        
+        async function saveSettings(event) {
+            event.preventDefault();
+            
+            const displayName = document.getElementById('display-name').value;
+            const bio = document.getElementById('bio').value;
+            
+            // Здесь можно сохранить настройки в отдельную таблицу
+            alert('Настройки сохранены! (в реальном приложении будет сохранение в БД)');
+            
+            // Обновляем имя в профиле
+            document.getElementById('profile-name').textContent = displayName;
+        }
+        
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = 'index.html';
+        }
+        
+        // Вспомогательные функции
+        function getCategoryName(category) {
+            const categories = {
+                swamp: '🦢 Болото',
+                tech: '💻 Техноболото',
+                art: '🎨 Искусство',
+                nature: '🌿 Природа'
+            };
+            return categories[category] || category;
+        }
+        
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return `hsl(${hash % 360}, 70%, 65%)`;
+        }
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+</html>
