@@ -712,6 +712,7 @@ async function createSite() {
             .single();
         
         if (error) {
+            console.error('Ошибка создания сайта:', error);
             showNotification('Ошибка', error.message);
         } else {
             showNotification('Успех', 'Запись сайта создана');
