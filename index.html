@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Гусиный Интернет | Поиск сайтов</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="subscriptions.js" defer></script>
+    <script src="rss-generator.js" defer></script>
     <style>
         :root {
             --goose-yellow: #ffcc00;
@@ -551,43 +553,48 @@
 <button onclick="showTab('notifications')">🔔 Уведомления</button>
 
 <!-- Новые вкладки -->
-<div id="feed-tab" class="tab-content hidden">
-    <h2>📰 Моя RSS-лента</h2>
-    
-    <div class="rss-controls">
-        <button onclick="refreshFeed()">🔄 Обновить</button>
-        <button onclick="exportOPML()">📥 Экспорт OPML</button>
-        <a href="/api/generate-rss?userId=current" target="_blank" class="rss-link">
-            📡 RSS-ссылка
-        </a>
-    </div>
-    
-    <div class="subscriptions-section">
-        <h3>Мои подписки</h3>
-        <div id="subscriptions-list" class="sites-grid"></div>
-        <button onclick="showAllSites()" class="btn-add">+ Добавить подписки</button>
-    </div>
-    
-    <div class="feed-section">
-        <h3>Последние обновления</h3>
-        <div id="rss-feed" class="feed-container">
-            <p>Загрузка ленты...</p>
-        </div>
-    </div>
-</div>
-
-<div id="notifications-tab" class="tab-content hidden">
-    <h2>🔔 Уведомления</h2>
-    
-    <div class="notifications-header">
-        <button onclick="markAllAsRead()">✓ Прочитать все</button>
-        <button onclick="clearNotifications()">🗑️ Очистить</button>
-    </div>
-    
-    <div id="notifications-list" class="notifications-container">
-        <!-- Уведомления будут здесь -->
-    </div>
-</div>
+<section id="feed-section" class="content-section">
+            <div class="search-section">
+                <div class="search-box">
+                    <h1 style="margin-bottom: 1.5rem; color: var(--goose-brown);">
+                        📰 Моя RSS-лента
+                    </h1>
+                    
+                    <div class="rss-controls">
+                        <button onclick="refreshFeed()" class="search-btn">🔄 Обновить</button>
+                        <button onclick="exportOPML()" class="search-btn">📥 Экспорт OPML</button>
+                        <button onclick="showAllSites()" class="search-btn">+ Добавить подписки</button>
+                    </div>
+                    
+                    <div id="rss-feed" class="feed-container" style="margin-top: 2rem;">
+                        <p>Загрузка ленты...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Раздел уведомлений -->
+        <section id="notifications-section" class="content-section">
+            <div class="search-section">
+                <div class="search-box">
+                    <h1 style="margin-bottom: 1.5rem; color: var(--goose-brown);">
+                        🔔 Уведомления
+                    </h1>
+                    
+                    <div class="notifications-header">
+                        <button onclick="markAllAsRead()" class="search-btn">✓ Прочитать все</button>
+                        <button onclick="clearNotifications()" class="search-btn" style="background: #f44336;">
+                            🗑️ Очистить
+                        </button>
+                    </div>
+                    
+                    <div id="notifications-list" class="notifications-container" style="margin-top: 2rem;">
+                        <!-- Уведомления будут здесь -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
 <!-- Попап для подписки на сайты -->
 <!-- <div id="subscribe-modal" class="modal hidden">
@@ -905,104 +912,78 @@
             return `hsl(${hash % 360}, 70%, 65%)`;
         }
 
-        // ======================
-// Управление вкладками
-// ======================
-
-let currentTab = 'feed';
-
-function showTab(tabName) {
-    // Скрываем все вкладки
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
+function showSection(sectionId) {
+    // Скрываем все разделы
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
     });
     
-    // Показываем выбранную вкладку
-    const activeTab = document.getElementById(`${tabName}-tab`);
-    if (activeTab) {
-        activeTab.classList.remove('hidden');
-        currentTab = tabName;
+    // Показываем выбранный раздел
+    const activeSection = document.getElementById(sectionId + '-section');
+    if (activeSection) {
+        activeSection.classList.add('active');
         
-        // Загружаем данные для вкладки
-        if (tabName === 'feed' && gooseSubscriptions) {
+        // Обновляем активную ссылку в навигации
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.style.background = '';
+        });
+        event.target.style.background = 'rgba(255, 255, 255, 0.2)';
+        
+        // Загружаем данные для раздела
+        if (sectionId === 'feed' && gooseSubscriptions) {
             loadFeed();
-        } else if (tabName === 'notifications' && gooseSubscriptions) {
+        } else if (sectionId === 'notifications' && gooseSubscriptions) {
             loadNotifications();
         }
     }
 }
 
 // ======================
-// Управление модальными окнами
+// Модальное окно для подписок
 // ======================
 
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('hidden');
-        // Блокируем скролл body
-        document.body.style.overflow = 'hidden';
-        
-        // Если открываем окно подписок, загружаем список сайтов
-        if (modalId === 'subscribe-modal') {
-            loadAvailableSites();
-        }
-    }
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('hidden');
-        document.body.style.overflow = '';
-    } else {
-        // Закрыть все модалки
-        document.querySelectorAll('.modal').forEach(m => {
-            m.classList.add('hidden');
-        });
-        document.body.style.overflow = '';
-    }
-}
-
-// Закрытие модалки по клику вне её
-document.addEventListener('click', (event) => {
-    if (event.target.classList.contains('modal')) {
-        closeModal(event.target.id);
-    }
-});
-
-// ======================
-// Функции для RSS ленты
-// ======================
-
-async function refreshFeed() {
-    const feedContainer = document.getElementById('rss-feed');
-    feedContainer.innerHTML = '<p>Обновление ленты...</p>';
+function showSubscribeModal() {
+    const modal = document.createElement('div');
+    modal.id = 'subscribe-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: var(--goose-brown); margin: 0;">Подписаться на сайты</h3>
+                <button onclick="closeModal()" style="
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    color: #666;
+                ">×</button>
+            </div>
+            <div id="available-sites" style="max-height: 400px; overflow-y: auto;">
+                <p>Загрузка сайтов...</p>
+            </div>
+        </div>
+    `;
     
-    if (gooseSubscriptions) {
-        await loadFeed();
-        showNotification('Лента обновлена', 'success');
-    } else {
-        showNotification('Сначала войдите в систему', 'error');
+    document.body.appendChild(modal);
+    loadAvailableSites();
+}
+
+function closeModal() {
+    const modal = document.getElementById('subscribe-modal');
+    if (modal) {
+        modal.remove();
     }
 }
 
-async function showAllSites() {
-    openModal('subscribe-modal');
-}
-
 // ======================
-// Загрузка доступных сайтов для подписки
+// Загрузка доступных сайтов
 // ======================
 
 async function loadAvailableSites() {
     const container = document.getElementById('available-sites');
     if (!container) return;
     
-    container.innerHTML = '<p>Загрузка сайтов...</p>';
-    
     try {
-        // Получаем все одобренные сайты
         const { data: allSites, error } = await supabase
             .from('sites')
             .select('*')
@@ -1011,7 +992,6 @@ async function loadAvailableSites() {
         
         if (error) throw error;
         
-        // Получаем текущие подписки пользователя
         let subscribedSiteIds = [];
         if (gooseSubscriptions && gooseSubscriptions.currentUser) {
             const subscriptions = await gooseSubscriptions.getMySubscriptions();
@@ -1024,21 +1004,48 @@ async function loadAvailableSites() {
         }
         
         container.innerHTML = allSites.map(site => `
-            <div class="site-item ${subscribedSiteIds.includes(site.id) ? 'subscribed' : ''}">
-                <div class="site-info">
-                    <h4>${site.title}</h4>
-                    <p>${site.description || 'Без описания'}</p>
-                    <div class="site-meta">
-                        <span class="biom biom-${site.category}">${getBiomName(site.category)}</span>
-                        <span class="site-url">${site.url}</span>
+            <div class="site-item" style="
+                border: 2px solid ${subscribedSiteIds.includes(site.id) ? '#4CAF50' : '#ddd'};
+                background: ${subscribedSiteIds.includes(site.id) ? '#f1f8e9' : 'white'};
+                padding: 1rem;
+                border-radius: 10px;
+                margin-bottom: 1rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 0.5rem 0;">${site.title}</h4>
+                    <p style="margin: 0 0 0.5rem 0; color: #666;">${site.description || 'Без описания'}</p>
+                    <div style="display: flex; gap: 1rem; font-size: 0.9rem; color: #888;">
+                        <span>${getCategoryName(site.category)}</span>
+                        <span style="background: #f5f5f5; padding: 2px 8px; border-radius: 4px;">
+                            ${site.url}
+                        </span>
                     </div>
                 </div>
-                <div class="site-actions">
+                <div>
                     ${subscribedSiteIds.includes(site.id) ? 
-                        `<button onclick="unsubscribeFromModal('${site.id}')" class="btn-unsubscribe">
+                        `<button onclick="unsubscribeFromModal('${site.id}')" style="
+                            background: #f44336;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                            font-weight: bold;
+                        ">
                             Отписаться
                         </button>` :
-                        `<button onclick="subscribeFromModal('${site.id}')" class="btn-subscribe">
+                        `<button onclick="subscribeFromModal('${site.id}')" style="
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                            font-weight: bold;
+                        ">
                             Подписаться
                         </button>`
                     }
@@ -1052,6 +1059,10 @@ async function loadAvailableSites() {
     }
 }
 
+// ======================
+// Функции подписок из модалки
+// ======================
+
 async function subscribeFromModal(siteId) {
     if (!gooseSubscriptions) {
         showNotification('Сначала войдите в систему', 'error');
@@ -1061,9 +1072,9 @@ async function subscribeFromModal(siteId) {
     const success = await gooseSubscriptions.subscribeToSite(siteId);
     if (success) {
         showNotification('Подписка добавлена!', 'success');
-        loadAvailableSites(); // Обновляем список
-        if (currentTab === 'feed') {
-            loadFeed(); // Обновляем ленту
+        loadAvailableSites();
+        if (document.getElementById('feed-section').classList.contains('active')) {
+            loadFeed();
         }
     } else {
         showNotification('Ошибка добавления подписки', 'error');
@@ -1078,7 +1089,7 @@ async function unsubscribeFromModal(siteId) {
         if (success) {
             showNotification('Вы отписались', 'info');
             loadAvailableSites();
-            if (currentTab === 'feed') {
+            if (document.getElementById('feed-section').classList.contains('active')) {
                 loadFeed();
             }
         }
@@ -1086,60 +1097,33 @@ async function unsubscribeFromModal(siteId) {
 }
 
 // ======================
-// Функции для уведомлений
+// Обновление ленты
 // ======================
 
-async function markAllAsRead() {
-    if (!gooseSubscriptions) {
-        showNotification('Сначала войдите в систему', 'error');
-        return;
-    }
-    
-    try {
-        await gooseSubscriptions.markAllAsRead();
-        loadNotifications();
-        showNotification('Все уведомления прочитаны', 'success');
-    } catch (error) {
-        console.error('Ошибка отметки уведомлений:', error);
-        showNotification('Ошибка при обновлении уведомлений', 'error');
-    }
-}
-
-async function clearNotifications() {
-    if (!gooseSubscriptions) {
-        showNotification('Сначала войдите в систему', 'error');
-        return;
-    }
-    
-    if (confirm('Удалить все уведомления? Это действие нельзя отменить.')) {
-        try {
-            await gooseSubscriptions.clearNotifications();
-            loadNotifications();
-            showNotification('Уведомления очищены', 'success');
-        } catch (error) {
-            console.error('Ошибка очистки уведомлений:', error);
-            showNotification('Ошибка при удалении уведомлений', 'error');
-        }
+async function refreshFeed() {
+    const feedContainer = document.getElementById('rss-feed');
+    if (feedContainer) {
+        feedContainer.innerHTML = '<p>Обновление ленты...</p>';
+        await loadFeed();
+        showNotification('Лента обновлена', 'success');
     }
 }
 
 // ======================
-// Вспомогательные функции
+// Показ всех сайтов (алиас для showSubscribeModal)
 // ======================
 
-function getBiomName(code) {
-    const biomMap = {
-        swamp: '🦢 Болото',
-        tech: '💻 Техноболото',
-        art: '🎨 Луга искусства',
-        nature: '🌿 Природа'
-    };
-    return biomMap[code] || code;
+function showAllSites() {
+    showSubscribeModal();
 }
+
+// ======================
+// Уведомления
+// ======================
 
 function showNotification(message, type = 'info') {
     // Удаляем старое уведомление если есть
-    const oldNotification = document.getElementById('goose-notification');
+    const oldNotification = document.querySelector('.goose-notification');
     if (oldNotification) {
         oldNotification.remove();
     }
@@ -1152,7 +1136,7 @@ function showNotification(message, type = 'info') {
     };
     
     const notification = document.createElement('div');
-    notification.id = 'goose-notification';
+    notification.className = 'goose-notification';
     notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -1185,9 +1169,9 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Добавляем анимации в стили
-const style = document.createElement('style');
-style.textContent = `
+// Добавьте в начало <style> в head:
+const notificationStyles = document.createElement('style');
+notificationStyles.textContent = `
     @keyframes slideIn {
         from { transform: translateX(100%); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
@@ -1198,8 +1182,12 @@ style.textContent = `
         to { transform: translateX(100%); opacity: 0; }
     }
     
-    .hidden {
-        display: none !important;
+    .content-section {
+        display: none;
+    }
+    
+    .content-section.active {
+        display: block;
     }
     
     .modal {
@@ -1213,6 +1201,7 @@ style.textContent = `
         align-items: center;
         justify-content: center;
         z-index: 1000;
+        padding: 20px;
     }
     
     .modal-content {
@@ -1220,79 +1209,108 @@ style.textContent = `
         border-radius: 15px;
         padding: 2rem;
         max-width: 800px;
+        width: 100%;
         max-height: 80vh;
         overflow-y: auto;
-        width: 90%;
         box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
     
-    .site-item {
+    .feed-container {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        background: white;
-    }
-    
-    .site-item.subscribed {
-        border-color: #4CAF50;
-        background: #f1f8e9;
-    }
-    
-    .site-info h4 {
-        margin: 0 0 0.5rem 0;
-        color: #333;
-    }
-    
-    .site-meta {
-        display: flex;
+        flex-direction: column;
         gap: 1rem;
-        align-items: center;
-        margin-top: 0.5rem;
+    }
+    
+    .feed-item {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .feed-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .feed-source {
+        color: #ffcc00;
+        font-weight: bold;
         font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .feed-meta {
         color: #666;
+        font-size: 0.85rem;
+        margin: 0.5rem 0;
     }
     
-    .site-url {
+    .notifications-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .notification {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 10px;
+        border-left: 4px solid #ffcc00;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .notification.unread {
+        background: #fff9e6;
+        border-left-color: #ff9900;
+    }
+    
+    .notification:hover {
         background: #f5f5f5;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-family: monospace;
     }
     
-    .btn-subscribe {
-        background: #4CAF50;
-        color: white;
+    .notification-icon {
+        font-size: 1.5rem;
+    }
+    
+    .delete-notif {
+        background: none;
         border: none;
-        padding: 8px 16px;
-        border-radius: 20px;
+        color: #999;
+        font-size: 1.5rem;
         cursor: pointer;
-        font-weight: bold;
+        padding: 0 0.5rem;
     }
     
-    .btn-unsubscribe {
-        background: #f44336;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 20px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    
-    .btn-subscribe:hover {
-        background: #45a049;
-    }
-    
-    .btn-unsubscribe:hover {
-        background: #d32f2f;
+    .delete-notif:hover {
+        color: #ff6b6b;
     }
 `;
-document.head.appendChild(style);
-        
+document.head.appendChild(notificationStyles);
+
+// Обновите обработчики навигации в loadData():
+async function loadData() {
+    await checkAuth();
+    await loadStats();
+    await loadSites();
+    
+    // Добавляем обработчики для навигации
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (href.startsWith('#')) {
+                e.preventDefault();
+                const sectionId = href.substring(1);
+                showSection(sectionId);
+            }
+        });
+    });
+}
         // Инициализация
         document.addEventListener('DOMContentLoaded', loadData);
     </script>
