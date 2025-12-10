@@ -208,7 +208,7 @@
                 <input type="text" id="author-name" placeholder="Гусятник">
             </div>
             
-            <div class="form-group">
+            <!-- <div class="form-group">
                 <label for="widget-url">URL виджета Гуснета *</label>
                 <input type="url" id="widget-url" 
                        value="https://ваш-виджет.vercel.app/widget.js" 
@@ -220,7 +220,7 @@
                 <input type="url" id="hub-url" 
                        value="https://ваш-хаб.vercel.app" 
                        required>
-            </div>
+            </div> -->
             
             <div class="preview-section">
                 <h3>Предварительный просмотр</h3>
@@ -281,8 +281,8 @@
             const description = document.getElementById('site-description').value;
             const biom = document.querySelector('input[name="biom"]:checked').value;
             const author = document.getElementById('author-name').value || 'Анонимный гусятник';
-            const widgetUrl = document.getElementById('widget-url').value;
-            const hubUrl = document.getElementById('hub-url').value;
+            const widgetUrl = "https://goosenet-widget.vercel.app/widget.js";//document.getElementById('widget-url').value;
+            const hubUrl = "https://goosenet-one.vercel.app";//document.getElementById('hub-url').value;
             
             if (!title) {
                 alert('Введите название сайта');
