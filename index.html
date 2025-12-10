@@ -363,16 +363,8 @@
                 <span>сайтов в сети</span>
             </div>
             <div class="stat-item">
-                <span class="stat-number" id="total-users">0</span>
-                <span>пользователей</span>
-            </div>
-            <div class="stat-item">
                 <span class="stat-number" id="new-today">0</span>
                 <span>новых сегодня</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number" id="total-visits">0</span>
-                <span>посещений</span>
             </div>
         </div>
     </section>
@@ -472,8 +464,8 @@
                 
                 document.getElementById('total-sites').textContent = sitesCount || 0;
                 document.getElementById('new-today').textContent = newToday || 0;
-                document.getElementById('total-users').textContent = Math.floor((sitesCount || 0) * 0.8);
-                document.getElementById('total-visits').textContent = Math.floor((sitesCount || 0) * 15);
+                //document.getElementById('total-users').textContent = Math.floor((sitesCount || 0) * 0.8);
+                //document.getElementById('total-visits').textContent = Math.floor((sitesCount || 0) * 15);
                 
             } catch (error) {
                 console.error('Ошибка загрузки статистики:', error);
