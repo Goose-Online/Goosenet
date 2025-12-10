@@ -567,6 +567,8 @@
                 showNotification('Ошибка', 'Не удалось загрузить данные');
             }
         }
+
+        init();
         
         // Обновление информации о пользователе
         function updateUserInfo() {
@@ -595,26 +597,34 @@
         }
         
         // Загрузка сайтов пользователя
-        async function loadUserSites() {
-            try {
-                // Получаем сайты из Supabase
-                const { data: sites, error } = await supabaseClient
-                    .from('sites')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .eq('hosting_type', 'selfhosted');
-                
-                if (error) throw error;
-                
-                userSites = sites || [];
-                renderSitesList();
-                updateUserInfo();
-                
-            } catch (error) {
-                console.error('Ошибка загрузки сайтов:', error);
-                showNotification('Ошибка', 'Не удалось загрузить список сайтов');
-            }
+        // Загрузка сайтов пользователя
+async function loadUserSites() {
+    try {
+        // Получаем сайты из Supabase
+        const { data: sites, error } = await supabaseClient
+            .from('sites')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .or(`hosting_type.eq.selfhosted,hosting_type.is.null`);
+        
+        if (error) {
+            console.error('Supabase error:', error);
+            throw error;
         }
+        
+        userSites = sites || [];
+        renderSitesList();
+        updateUserInfo();
+        
+    } catch (error) {
+        console.error('Ошибка загрузки сайтов:', error);
+        showNotification('Ошибка', 'Не удалось загрузить список сайтов');
+        
+        // Временное решение: показываем пустой список
+        userSites = [];
+        renderSitesList();
+    }
+}
         
         // Отображение списка сайтов
         function renderSitesList() {
@@ -669,67 +679,102 @@
         }
         
         // Создание нового сайта
-        async function createSite() {
-            const name = document.getElementById('site-name').value.trim();
-            const description = document.getElementById('site-description').value.trim();
-            const template = document.getElementById('site-template').value;
-            const biom = document.getElementById('site-biom').value;
-            
-            if (!name) {
-                showNotification('Ошибка', 'Введите название сайта');
-                return;
-            }
-            
-            if (!CONFIG.githubToken) {
-                showNotification('Ошибка', 'Сначала подключите аккаунт GitHub');
-                return;
-            }
-            
-            try {
-                showNotification('Создание', 'Создаём ваш сайт...');
-                
-                // 1. Создаём запись в базе данных
-                const { data: site, error: dbError } = await supabaseClient
-                    .from('sites')
-                    .insert([{
-                        url: `https://${CONFIG.githubRepo.split('/')[0]}.github.io/${CONFIG.githubRepo.split('/')[1]}/sites/${currentUser.id}/${name.toLowerCase().replace(/\s+/g, '-')}/`,
-                        title: name,
-                        description: description,
-                        category: biom,
-                        user_id: currentUser.id,
-                        status: 'draft',
-                        hosting_type: 'selfhosted',
-                        storage_limit: CONFIG.storageLimit,
-                        used_storage: 0
-                    }])
-                    .select()
-                    .single();
-                
-                if (dbError) throw dbError;
-                
-                // 2. Создаём папку на GitHub
-                const folderName = `${currentUser.id}/${name.toLowerCase().replace(/\s+/g, '-')}`;
-                await createGitHubFolder(folderName);
-                
-                // 3. Создаём файлы шаблона
-                await createTemplateFiles(folderName, template, {
-                    title: name,
-                    description: description,
-                    biom: biom,
-                    author: currentUser.email
-                });
-                
-                // 4. Обновляем список сайтов
-                await loadUserSites();
-                
-                showNotification('Успех', 'Сайт создан! Теперь можно редактировать.');
-                setTimeout(() => editSite(site.id), 1000);
-                
-            } catch (error) {
-                console.error('Ошибка создания сайта:', error);
-                showNotification('Ошибка', error.message || 'Не удалось создать сайт');
-            }
+        // Создание нового сайта
+async function createSite() {
+    const name = document.getElementById('site-name').value.trim();
+    const description = document.getElementById('site-description').value.trim();
+    const template = document.getElementById('site-template').value;
+    const biom = document.getElementById('site-biom').value;
+    
+    if (!name) {
+        showNotification('Ошибка', 'Введите название сайта');
+        return;
+    }
+    
+    // Если нет GitHub токена, просто создаём запись в БД
+    if (!CONFIG.githubToken) {
+        showNotification('Внимание', 'Создаём локальную запись сайта. Для самохостинга подключите GitHub.');
+        
+        const { data: site, error } = await supabaseClient
+            .from('sites')
+            .insert([{
+                url: `#local-${Date.now()}`,
+                title: name,
+                description: description,
+                category: biom,
+                user_id: currentUser.id,
+                status: 'draft',
+                hosting_type: 'external', // Пока внешний хостинг
+                storage_limit: CONFIG.storageLimit,
+                used_storage: 0
+            }])
+            .select()
+            .single();
+        
+        if (error) {
+            showNotification('Ошибка', error.message);
+        } else {
+            showNotification('Успех', 'Запись сайта создана');
+            await loadUserSites();
         }
+        return;
+    }
+    
+    try {
+        showNotification('Создание', 'Создаём ваш сайт...');
+        
+        // Генерируем URL для GitHub Pages
+        const siteSlug = name.toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+        
+        const githubUrl = `https://${CONFIG.githubRepo.split('/')[0]}.github.io/${CONFIG.githubRepo.split('/')[1]}/sites/${currentUser.id}/${siteSlug}/`;
+        
+        // 1. Создаём запись в базе данных
+        const { data: site, error: dbError } = await supabaseClient
+            .from('sites')
+            .insert([{
+                url: githubUrl,
+                title: name,
+                description: description,
+                category: biom,
+                user_id: currentUser.id,
+                status: 'draft',
+                hosting_type: 'selfhosted',
+                storage_limit: CONFIG.storageLimit,
+                used_storage: 0
+            }])
+            .select()
+            .single();
+        
+        if (dbError) {
+            console.error('Database error:', dbError);
+            throw dbError;
+        }
+        
+        // 2. Создаём папку на GitHub
+        const folderName = `${currentUser.id}/${siteSlug}`;
+        await createGitHubFolder(folderName);
+        
+        // 3. Создаём файлы шаблона
+        await createTemplateFiles(folderName, template, {
+            title: name,
+            description: description,
+            biom: biom,
+            author: currentUser.email
+        });
+        
+        // 4. Обновляем список сайтов
+        await loadUserSites();
+        
+        showNotification('Успех', 'Сайт создан! Теперь можно редактировать.');
+        setTimeout(() => editSite(site.id), 1000);
+        
+    } catch (error) {
+        console.error('Ошибка создания сайта:', error);
+        showNotification('Ошибка', error.message || 'Не удалось создать сайт');
+    }
+}
         
         // Создание папки на GitHub
         async function createGitHubFolder(folderName) {
