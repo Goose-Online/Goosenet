@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Гуснета</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: #ffcc00;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .feeds {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .feed-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .feed-item:hover {
+            background: #fff9e6;
+        }
+        
+        .feed-item.active {
+            border-color: #ffcc00;
+            background: #fff9e6;
+        }
+        
+        .items {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+        
+        .item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .item-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .item-title a:hover {
+            color: #ff9900;
+        }
+        
+        .item-meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .item-desc {
+            color: #444;
+            line-height: 1.5;
+        }
+        
+        button {
+            background: #ffcc00;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #ffd633;
+        }
+        
+        input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📰 RSS Гуснета</h1>
+        <p>Читайте обновления всех сайтов сети</p>
+    </div>
+    
+    <div class="feeds">
+        <h3>Ленты сайтов</h3>
+        <input type="text" id="rss-url" placeholder="https://site.com/rss.xml">
+        <button onclick="addRSS()">Добавить RSS</button>
+        
+        <div id="feed-list">
+            <!-- Сайты будут здесь -->
+        </div>
+    </div>
+    
+    <div class="items">
+        <h3 id="feed-title">Выберите ленту</h3>
+        <div id="item-list">
+            <div class="loading">Выберите ленту слева</div>
+        </div>
+    </div>
+
+    <script>
+        // Данные
+        let feeds = [];
+        let currentFeed = null;
+        
+        // Загрузка подписок
+        function loadFeeds() {
+            const saved = localStorage.getItem('goose_feeds');
+            if (saved) {
+                feeds = JSON.parse(saved);
+                showFeeds();
+            }
+        }
+        
+        // Сохранение подписок
+        function saveFeeds() {
+            localStorage.setItem('goose_feeds', JSON.stringify(feeds));
+        }
+        
+        // Показать список лент
+        function showFeeds() {
+            const container = document.getElementById('feed-list');
+            
+            if (feeds.length === 0) {
+                container.innerHTML = '<p>Добавьте первую RSS ленту</p>';
+                return;
+            }
+            
+            container.innerHTML = feeds.map((feed, index) => `
+                <div class="feed-item ${currentFeed === index ? 'active' : ''}" 
+                     onclick="loadFeed(${index})">
+                    <div style="font-weight: bold;">${feed.title || 'Без названия'}</div>
+                    <div style="font-size: 14px; color: #666;">${feed.url}</div>
+                    <button onclick="removeFeed(${index}); event.stopPropagation();" 
+                            style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">
+                        Удалить
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        // Добавить RSS ленту
+        async function addRSS() {
+            const url = document.getElementById('rss-url').value.trim();
+            if (!url) return alert('Введите URL');
+            
+            try {
+                const feed = await parseRSS(url);
+                
+                feeds.push({
+                    url: url,
+                    title: feed.title || new URL(url).hostname,
+                    items: []
+                });
+                
+                saveFeeds();
+                showFeeds();
+                document.getElementById('rss-url').value = '';
+                
+                // Загружаем новую ленту
+                loadFeed(feeds.length - 1);
+                
+            } catch (error) {
+                alert('Ошибка: ' + error.message);
+            }
+        }
+        
+        // Загрузить ленту
+        async function loadFeed(index) {
+            currentFeed = index;
+            const feed = feeds[index];
+            
+            showFeeds();
+            document.getElementById('item-list').innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const feedData = await parseRSS(feed.url);
+                
+                // Обновляем заголовок ленты
+                document.getElementById('feed-title').textContent = 
+                    feedData.title || feed.title;
+                
+                // Показываем записи
+                showItems(feedData.items || []);
+                
+                // Обновляем заголовок в списке
+                if (feedData.title && feedData.title !== feed.title) {
+                    feed.title = feedData.title;
+                    saveFeeds();
+                    showFeeds();
+                }
+                
+            } catch (error) {
+                document.getElementById('item-list').innerHTML = 
+                    `<p style="color: red;">Ошибка загрузки: ${error.message}</p>`;
+            }
+        }
+        
+        // Показать записи
+        function showItems(items) {
+            const container = document.getElementById('item-list');
+            
+            if (items.length === 0) {
+                container.innerHTML = '<p>В ленте нет записей</p>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => `
+                <div class="item">
+                    <div class="item-title">
+                        <a href="${item.link}" target="_blank">${item.title || 'Без названия'}</a>
+                    </div>
+                    <div class="item-meta">
+                        ${item.date ? new Date(item.date).toLocaleDateString() : ''}
+                        ${item.author ? ' • ' + item.author : ''}
+                    </div>
+                    <div class="item-desc">
+                        ${item.description || ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Удалить ленту
+        function removeFeed(index) {
+            if (confirm('Удалить эту ленту?')) {
+                feeds.splice(index, 1);
+                saveFeeds();
+                showFeeds();
+                document.getElementById('item-list').innerHTML = 
+                    '<div class="loading">Выберите ленту</div>';
+                document.getElementById('feed-title').textContent = 'Выберите ленту';
+                currentFeed = null;
+            }
+        }
+        
+        // Парсер RSS (простой)
+        async function parseRSS(url) {
+            try {
+                // Используем CORS прокси
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+                
+                if (!data.contents) throw new Error('Пустой ответ');
+                
+                // Парсим XML
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(data.contents, 'text/xml');
+                
+                // Получаем канал
+                const channel = xml.querySelector('channel') || xml.querySelector('feed');
+                if (!channel) throw new Error('Не RSS лента');
+                
+                // Получаем заголовок
+                const title = channel.querySelector('title')?.textContent || 
+                             channel.querySelector('title')?.textContent || 
+                             new URL(url).hostname;
+                
+                // Получаем записи
+                const items = [];
+                const itemNodes = xml.querySelectorAll('item, entry');
+                
+                itemNodes.forEach(item => {
+                    const link = item.querySelector('link')?.textContent || 
+                                item.querySelector('link')?.getAttribute('href');
+                    
+                    if (link) {
+                        items.push({
+                            title: item.querySelector('title')?.textContent || 'Без названия',
+                            link: link,
+                            description: item.querySelector('description')?.textContent || 
+                                       item.querySelector('summary')?.textContent || 
+                                       item.querySelector('content')?.textContent || '',
+                            date: item.querySelector('pubDate')?.textContent || 
+                                 item.querySelector('published')?.textContent,
+                            author: item.querySelector('author')?.textContent || 
+                                   item.querySelector('dc\\:creator')?.textContent
+                        });
+                    }
+                });
+                
+                return { title, items };
+                
+            } catch (error) {
+                throw new Error('Не удалось загрузить RSS');
+            }
+        }
+        
+        // Примеры лент для быстрого старта
+        const exampleFeeds = [
+            'https://habr.com/ru/rss/hub/go/',
+            'https://lenta.ru/rss/news',
+            'https://meduza.io/rss/all'
+        ];
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFeeds();
+            
+            // Если нет лент, предлагаем примеры
+            if (feeds.length === 0) {
+                document.getElementById('feed-list').innerHTML += `
+                    <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px;">
+                        <p style="margin-bottom: 10px;">Попробуйте эти ленты:</p>
+                        ${exampleFeeds.map(url => `
+                            <button onclick="document.getElementById('rss-url').value = '${url}'; addRSS()" 
+                                    style="margin: 5px;">
+                                Добавить ${new URL(url).hostname}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
