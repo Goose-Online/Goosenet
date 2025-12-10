@@ -12,17 +12,7 @@
     <!-- Гусиные стили (опционально) -->
     <link rel="stylesheet" href="https://goosenet-one.vercel.app/goose-styles.css">
 
-    <!-- Добавьте в ваш сайт -->
-    <script src="https://goosenet-one.vercel.app/rss-system/rss-parser.js"></script>
-    <script>
-        const reader = new GooseRSSParser();
-        
-        // Добавьте кнопку подписки
-        const button = document.createElement('a');
-        button.href = '/rss.xml';
-        button.innerHTML = '📰 Подписаться';
-        document.body.appendChild(button);
-    </script>
+    
     
     <style>
         /* Основные стили в духе Гуснета */
@@ -450,7 +440,17 @@
         
         updateSiteData(siteData);
     </script>
-
+<!-- Добавьте в ваш сайт -->
+    <script src="https://goosenet-one.vercel.app/rss-system/rss-parser.js"></script>
+    <script>
+        const reader = new GooseRSSParser();
+        
+        // Добавьте кнопку подписки
+        const button = document.createElement('a');
+        button.href = '/rss.xml';
+        button.innerHTML = '📰 Подписаться';
+        document.body.appendChild(button);
+    </script>
     <!-- Добавьте в конец страницы -->
 <script src="https://goosenet-one.vercel.app/rss-system/rss-generator.js"></script>
 <script>
