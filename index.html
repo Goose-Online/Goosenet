@@ -590,11 +590,30 @@
 </div>
 
 <!-- Попап для подписки на сайты -->
-<div id="subscribe-modal" class="modal hidden">
+<!-- <div id="subscribe-modal" class="modal hidden">
     <div class="modal-content">
         <h3>Подписаться на сайты</h3>
         <div id="available-sites" class="sites-list"></div>
         <button onclick="closeModal()">Закрыть</button>
+    </div>
+</div> -->
+
+    <div id="subscribe-modal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Подписаться на сайты</h3>
+        <div id="available-sites" class="sites-list"></div>
+        <div style="text-align: center; margin-top: 2rem;">
+            <button onclick="closeModal('subscribe-modal')" style="
+                background: #666;
+                color: white;
+                border: none;
+                padding: 10px 30px;
+                border-radius: 25px;
+                cursor: pointer;
+            ">
+                Закрыть
+            </button>
+        </div>
     </div>
 </div>
 
