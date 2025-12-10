@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<!-- rss-manager.html - Управление подписками -->
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление подписками - Гусиный Интернет</title>
+    <script src="rss-parser.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        
+        .manager {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .feed-card {
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .feed-card:hover {
+            border-color: #ffcc00;
+            transform: translateY(-3px);
+        }
+        
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .feed-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .feed-url {
+            color: #666;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        
+        .feed-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            color: #888;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .btn-update {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-remove {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-export {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .add-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .add-form input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .add-form button {
+            width: 100%;
+            padding: 12px;
+            background: #ffcc00;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="manager">
+        <h1>📋 Управление подписками</h1>
+        
+        <div class="add-form">
+            <input type="url" id="new-feed-url" placeholder="https://example.com/rss.xml">
+            <button onclick="addFeed()">➕ Добавить ленту</button>
+        </div>
+        
+        <div id="feeds-list">
+            <!-- Подписки будут здесь -->
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn btn-export" onclick="exportOPML()">📥 Экспорт OPML</button>
+            <button class="btn btn-export" onclick="importOPML()">📤 Импорт OPML</button>
+        </div>
+    </div>
+
+    <script>
+        const parser = new GooseRSSParser();
+        let feeds = [];
+        
+        // Загрузка подписок
+        function loadFeeds() {
+            const saved = localStorage.getItem('goose_rss_feeds');
+            feeds = saved ? JSON.parse(saved) : [];
+            renderFeeds();
+        }
+        
+        // Сохранение подписок
+        function saveFeeds() {
+            localStorage.setItem('goose_rss_feeds', JSON.stringify(feeds));
+        }
+        
+        // Отображение подписок
+        function renderFeeds() {
+            const container = document.getElementById('feeds-list');
+            
+            if (feeds.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Подписок пока нет</p>';
+                return;
+            }
+            
+            container.innerHTML = feeds.map((feed, index) => `
+                <div class="feed-card">
+                    <div class="feed-header">
+                        <div class="feed-title">${feed.title || 'Без названия'}</div>
+                        <div style="font-size: 12px; color: #888;">${formatDate(feed.added)}</div>
+                    </div>
+                    <div class="feed-url">${feed.url}</div>
+                    <div class="feed-stats">
+                        <span>📝 ${feed.itemCount || 0} записей</span>
+                        <span>👁️ ${feed.readCount || 0} прочитано</span>
+                        <span>⏰ ${feed.lastUpdate || 'Никогда'}</span>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-update" onclick="updateFeed(${index})">
+                            🔄 Обновить
+                        </button>
+                        <button class="btn btn-remove" onclick="removeFeed(${index})">
+                            🗑️ Удалить
+                        </button>
+                        <button class="btn" onclick="testFeed(${index})" style="background: #9C27B0; color: white;">
+                            🔍 Тест
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Добавление ленты
+        async function addFeed() {
+            const urlInput = document.getElementById('new-feed-url');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                alert('Введите URL RSS ленты');
+                return;
+            }
+            
+            try {
+                // Проверяем ленту
+                const feedData = await parser.parseFeed(url);
+                
+                if (!feedData.items || feedData.items.length === 0) {
+                    throw new Error('Лента пуста');
+                }
+                
+                // Добавляем в список
+                feeds.push({
+                    url: url,
+                    title: feedData.channel?.title || new URL(url).hostname,
+                    description: feedData.channel?.description,
+                    added: new Date().toISOString(),
+                    lastUpdate: new Date().toLocaleString(),
+                    itemCount: feedData.items.length,
+                    readCount: 0
+                });
+                
+                // Сохраняем
+                saveFeeds();
+                renderFeeds();
+                
+                // Очищаем поле
+                urlInput.value = '';
+                
+                alert('✅ Лента добавлена!');
+                
+            } catch (error) {
+                alert('❌ Ошибка: ' + error.message);
+            }
+        }
+        
+        // Обновление ленты
+        async function updateFeed(index) {
+            try {
+                const feed = feeds[index];
+                const feedData = await parser.parseFeed(feed.url);
+                
+                // Обновляем информацию
+                feed.title = feedData.channel?.title || feed.title;
+                feed.description = feedData.channel?.description;
+                feed.lastUpdate = new Date().toLocaleString();
+                feed.itemCount = feedData.items.length;
+                
+                // Сохраняем
+                saveFeeds();
+                renderFeeds();
+                
+                alert('✅ Лента обновлена!');
+                
+            } catch (error) {
+                alert('❌ Ошибка обновления: ' + error.message);
+            }
+        }
+        
+        // Удаление ленты
+        function removeFeed(index) {
+            if (confirm('Удалить эту ленту?')) {
+                feeds.splice(index, 1);
+                saveFeeds();
+                renderFeeds();
+                alert('✅ Лента удалена');
+            }
+        }
+        
+        // Тестирование ленты
+        async function testFeed(index) {
+            const feed = feeds[index];
+            
+            try {
+                const feedData = await parser.parseFeed(feed.url);
+                
+                alert(`✅ Лента работает!\n\nЗаголовок: ${feedData.channel?.title}\nЗаписей: ${feedData.items.length}\nПоследняя запись: ${feedData.items[0]?.title}`);
+                
+            } catch (error) {
+                alert('❌ Ошибка: ' + error.message);
+            }
+        }
+        
+        // Экспорт в OPML
+        function exportOPML() {
+            const opml = `<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+    <head>
+        <title>Гусиный Интернет - Подписки</title>
+        <dateCreated>${new Date().toUTCString()}</dateCreated>
+    </head>
+    <body>
+        ${feeds.map(feed => `
+        <outline type="rss" text="${feed.title}" title="${feed.title}" xmlUrl="${feed.url}" htmlUrl="${feed.url.replace(/\/[^/]*$/, '')}" />
+        `).join('\n')}
+    </body>
+</opml>`;
+            
+            // Создаём файл для скачивания
+            const blob = new Blob([opml], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'goose-subscriptions.opml';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Импорт из OPML
+        function importOPML() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.opml,.xml';
+            
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const text = await file.text();
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(text, 'text/xml');
+                    
+                    const outlines = xmlDoc.querySelectorAll('outline[type="rss"], outline[xmlUrl]');
+                    let imported = 0;
+                    
+                    for (const outline of outlines) {
+                        const url = outline.getAttribute('xmlUrl') || outline.getAttribute('url');
+                        const title = outline.getAttribute('title') || outline.getAttribute('text');
+                        
+                        if (url && !feeds.some(f => f.url === url)) {
+                            feeds.push({
+                                url: url,
+                                title: title || new URL(url).hostname,
+                                added: new Date().toISOString(),
+                                lastUpdate: 'Никогда'
+                            });
+                            imported++;
+                        }
+                    }
+                    
+                    if (imported > 0) {
+                        saveFeeds();
+                        renderFeeds();
+                        alert(`✅ Импортировано ${imported} лент`);
+                    } else {
+                        alert('ℹ️ Новых лент не найдено');
+                    }
+                    
+                } catch (error) {
+                    alert('❌ Ошибка импорта: ' + error.message);
+                }
+            };
+            
+            input.click();
+        }
+        
+        // Форматирование даты
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'short'
+            });
+        }
+        
+        // Загрузка при старте
+        document.addEventListener('DOMContentLoaded', loadFeeds);
+    </script>
+</body>
+</html>
