@@ -885,6 +885,394 @@
             }
             return `hsl(${hash % 360}, 70%, 65%)`;
         }
+
+        // ======================
+// Управление вкладками
+// ======================
+
+let currentTab = 'feed';
+
+function showTab(tabName) {
+    // Скрываем все вкладки
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+    });
+    
+    // Показываем выбранную вкладку
+    const activeTab = document.getElementById(`${tabName}-tab`);
+    if (activeTab) {
+        activeTab.classList.remove('hidden');
+        currentTab = tabName;
+        
+        // Загружаем данные для вкладки
+        if (tabName === 'feed' && gooseSubscriptions) {
+            loadFeed();
+        } else if (tabName === 'notifications' && gooseSubscriptions) {
+            loadNotifications();
+        }
+    }
+}
+
+// ======================
+// Управление модальными окнами
+// ======================
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        // Блокируем скролл body
+        document.body.style.overflow = 'hidden';
+        
+        // Если открываем окно подписок, загружаем список сайтов
+        if (modalId === 'subscribe-modal') {
+            loadAvailableSites();
+        }
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    } else {
+        // Закрыть все модалки
+        document.querySelectorAll('.modal').forEach(m => {
+            m.classList.add('hidden');
+        });
+        document.body.style.overflow = '';
+    }
+}
+
+// Закрытие модалки по клику вне её
+document.addEventListener('click', (event) => {
+    if (event.target.classList.contains('modal')) {
+        closeModal(event.target.id);
+    }
+});
+
+// ======================
+// Функции для RSS ленты
+// ======================
+
+async function refreshFeed() {
+    const feedContainer = document.getElementById('rss-feed');
+    feedContainer.innerHTML = '<p>Обновление ленты...</p>';
+    
+    if (gooseSubscriptions) {
+        await loadFeed();
+        showNotification('Лента обновлена', 'success');
+    } else {
+        showNotification('Сначала войдите в систему', 'error');
+    }
+}
+
+async function showAllSites() {
+    openModal('subscribe-modal');
+}
+
+// ======================
+// Загрузка доступных сайтов для подписки
+// ======================
+
+async function loadAvailableSites() {
+    const container = document.getElementById('available-sites');
+    if (!container) return;
+    
+    container.innerHTML = '<p>Загрузка сайтов...</p>';
+    
+    try {
+        // Получаем все одобренные сайты
+        const { data: allSites, error } = await supabase
+            .from('sites')
+            .select('*')
+            .eq('status', 'approved')
+            .order('title');
+        
+        if (error) throw error;
+        
+        // Получаем текущие подписки пользователя
+        let subscribedSiteIds = [];
+        if (gooseSubscriptions && gooseSubscriptions.currentUser) {
+            const subscriptions = await gooseSubscriptions.getMySubscriptions();
+            subscribedSiteIds = subscriptions.map(s => s.site_id);
+        }
+        
+        if (allSites.length === 0) {
+            container.innerHTML = '<p>Пока нет доступных сайтов.</p>';
+            return;
+        }
+        
+        container.innerHTML = allSites.map(site => `
+            <div class="site-item ${subscribedSiteIds.includes(site.id) ? 'subscribed' : ''}">
+                <div class="site-info">
+                    <h4>${site.title}</h4>
+                    <p>${site.description || 'Без описания'}</p>
+                    <div class="site-meta">
+                        <span class="biom biom-${site.category}">${getBiomName(site.category)}</span>
+                        <span class="site-url">${site.url}</span>
+                    </div>
+                </div>
+                <div class="site-actions">
+                    ${subscribedSiteIds.includes(site.id) ? 
+                        `<button onclick="unsubscribeFromModal('${site.id}')" class="btn-unsubscribe">
+                            Отписаться
+                        </button>` :
+                        `<button onclick="subscribeFromModal('${site.id}')" class="btn-subscribe">
+                            Подписаться
+                        </button>`
+                    }
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Ошибка загрузки сайтов:', error);
+        container.innerHTML = '<p>Ошибка загрузки. Попробуйте позже.</p>';
+    }
+}
+
+async function subscribeFromModal(siteId) {
+    if (!gooseSubscriptions) {
+        showNotification('Сначала войдите в систему', 'error');
+        return;
+    }
+    
+    const success = await gooseSubscriptions.subscribeToSite(siteId);
+    if (success) {
+        showNotification('Подписка добавлена!', 'success');
+        loadAvailableSites(); // Обновляем список
+        if (currentTab === 'feed') {
+            loadFeed(); // Обновляем ленту
+        }
+    } else {
+        showNotification('Ошибка добавления подписки', 'error');
+    }
+}
+
+async function unsubscribeFromModal(siteId) {
+    if (!gooseSubscriptions) return;
+    
+    if (confirm('Вы уверены, что хотите отписаться?')) {
+        const success = await gooseSubscriptions.unsubscribeFromSite(siteId);
+        if (success) {
+            showNotification('Вы отписались', 'info');
+            loadAvailableSites();
+            if (currentTab === 'feed') {
+                loadFeed();
+            }
+        }
+    }
+}
+
+// ======================
+// Функции для уведомлений
+// ======================
+
+async function markAllAsRead() {
+    if (!gooseSubscriptions) {
+        showNotification('Сначала войдите в систему', 'error');
+        return;
+    }
+    
+    try {
+        await gooseSubscriptions.markAllAsRead();
+        loadNotifications();
+        showNotification('Все уведомления прочитаны', 'success');
+    } catch (error) {
+        console.error('Ошибка отметки уведомлений:', error);
+        showNotification('Ошибка при обновлении уведомлений', 'error');
+    }
+}
+
+async function clearNotifications() {
+    if (!gooseSubscriptions) {
+        showNotification('Сначала войдите в систему', 'error');
+        return;
+    }
+    
+    if (confirm('Удалить все уведомления? Это действие нельзя отменить.')) {
+        try {
+            await gooseSubscriptions.clearNotifications();
+            loadNotifications();
+            showNotification('Уведомления очищены', 'success');
+        } catch (error) {
+            console.error('Ошибка очистки уведомлений:', error);
+            showNotification('Ошибка при удалении уведомлений', 'error');
+        }
+    }
+}
+
+// ======================
+// Вспомогательные функции
+// ======================
+
+function getBiomName(code) {
+    const biomMap = {
+        swamp: '🦢 Болото',
+        tech: '💻 Техноболото',
+        art: '🎨 Луга искусства',
+        nature: '🌿 Природа'
+    };
+    return biomMap[code] || code;
+}
+
+function showNotification(message, type = 'info') {
+    // Удаляем старое уведомление если есть
+    const oldNotification = document.getElementById('goose-notification');
+    if (oldNotification) {
+        oldNotification.remove();
+    }
+    
+    const colors = {
+        success: '#4CAF50',
+        error: '#f44336',
+        info: '#2196F3',
+        warning: '#ff9800'
+    };
+    
+    const notification = document.createElement('div');
+    notification.id = 'goose-notification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type] || colors.info};
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+    `;
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Автоматически скрываем через 5 секунд
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 5000);
+}
+
+// Добавляем анимации в стили
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .hidden {
+        display: none !important;
+    }
+    
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    
+    .site-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        background: white;
+    }
+    
+    .site-item.subscribed {
+        border-color: #4CAF50;
+        background: #f1f8e9;
+    }
+    
+    .site-info h4 {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+    }
+    
+    .site-meta {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .site-url {
+        background: #f5f5f5;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+    
+    .btn-subscribe {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    .btn-unsubscribe {
+        background: #f44336;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    .btn-subscribe:hover {
+        background: #45a049;
+    }
+    
+    .btn-unsubscribe:hover {
+        background: #d32f2f;
+    }
+`;
+document.head.appendChild(style);
         
         // Инициализация
         document.addEventListener('DOMContentLoaded', loadData);
