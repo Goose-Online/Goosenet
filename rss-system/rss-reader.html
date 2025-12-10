@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📰 RSS Читалка - Гусиный Интернет</title>
+    <script src="rss-parser.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .reader {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .reader-header {
+            background: linear-gradient(90deg, #ffcc00, #ff9900);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .reader-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .reader-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 800px;
+        }
+        
+        /* Панель подписок */
+        .subscriptions-panel {
+            background: #f8f9fa;
+            border-right: 2px solid #e9ecef;
+            padding: 25px;
+            overflow-y: auto;
+        }
+        
+        .add-feed-form {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .add-feed-form input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .add-feed-form button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .add-feed-form button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .feed-list {
+            margin-top: 20px;
+        }
+        
+        .feed-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .feed-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .feed-item.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .feed-unread {
+            background: #48bb78;
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 24px;
+            text-align: center;
+        }
+        
+        /* Панель ленты */
+        .feed-panel {
+            padding: 25px;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .feed-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+        
+        .feed-empty h2 {
+            margin-bottom: 20px;
+            color: #4a5568;
+        }
+        
+        .feed-item-card {
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .feed-item-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .feed-item-card.unread {
+            border-left: 5px solid #48bb78;
+            background: #f0fff4;
+        }
+        
+        .feed-item-title {
+            font-size: 1.4rem;
+            color: #2d3748;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .feed-item-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .feed-item-title a:hover {
+            color: #667eea;
+            text-decoration: underline;
+        }
+        
+        .feed-item-meta {
+            display: flex;
+            gap: 15px;
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .feed-item-source {
+            color: #667eea;
+            font-weight: 500;
+        }
+        
+        .feed-item-description {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            max-height: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .feed-item-description::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(transparent, white);
+        }
+        
+        .feed-item-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 8px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            background: white;
+            color: #4a5568;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .btn-read {
+            background: #48bb78;
+            color: white;
+            border-color: #48bb78;
+        }
+        
+        .btn-save {
+            background: #ed8936;
+            color: white;
+            border-color: #ed8936;
+        }
+        
+        .btn-external {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        /* Загрузка */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Ошибка */
+        .error {
+            background: #fed7d7;
+            border: 2px solid #fc8181;
+            color: #c53030;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-left: 5px solid #48bb78;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .reader-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .subscriptions-panel {
+                border-right: none;
+                border-bottom: 2px solid #e9ecef;
+                max-height: 300px;
+            }
+            
+            .reader-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="reader">
+        <div class="reader-header">
+            <h1>📰 RSS Читалка</h1>
+            <p>Читайте все ваши подписки в одном месте</p>
+        </div>
+        
+        <div class="reader-content">
+            <!-- Панель подписок -->
+            <div class="subscriptions-panel">
+                <div class="add-feed-form">
+                    <input type="url" id="feed-url" placeholder="https://example.com/rss.xml">
+                    <button onclick="addFeed()">➕ Добавить ленту</button>
+                    <button onclick="discoverFeeds()" style="margin-top: 10px; background: #ed8936;">
+                        🔍 Найти на сайте
+                    </button>
+                </div>
+                
+                <div class="feed-list" id="feed-list">
+                    <!-- Подписки будут здесь -->
+                </div>
+            </div>
+            
+            <!-- Панель ленты -->
+            <div class="feed-panel">
+                <div id="feed-content">
+                    <div class="feed-empty">
+                        <h2>👋 Добро пожаловать!</h2>
+                        <p>Добавьте RSS ленту, чтобы начать читать.</p>
+                        <p>Попробуйте эти популярные ленты:</p>
+                        <div style="margin-top: 20px;">
+                            <button class="action-btn" onclick="addExampleFeed('https://habr.com/ru/rss/all/all/')">
+                                Добавить Хабрахабр
+                            </button>
+                            <button class="action-btn" onclick="addExampleFeed('https://lenta.ru/rss')">
+                                Добавить Ленту.ру
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Уведомления -->
+    <div class="notification" id="notification"></div>
+    
+    <!-- Ошибка -->
+    <div class="error" id="error"></div>
+
+    <script>
+        // Инициализация
+        const parser = new GooseRSSParser();
+        let feeds = [];
+        let currentFeed = null;
+        
+        // Загрузка подписок из localStorage
+        function loadSubscriptions() {
+            const saved = localStorage.getItem('goose_rss_feeds');
+            if (saved) {
+                feeds = JSON.parse(saved);
+                renderFeedList();
+            }
+        }
+        
+        // Сохранение подписок
+        function saveSubscriptions() {
+            localStorage.setItem('goose_rss_feeds', JSON.stringify(feeds));
+        }
+        
+        // Отображение списка подписок
+        function renderFeedList() {
+            const container = document.getElementById('feed-list');
+            
+            if (feeds.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #718096;">
+                        <p>Подписок пока нет</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = feeds.map((feed, index) => `
+                <div class="feed-item ${currentFeed === index ? 'active' : ''}" 
+                     onclick="selectFeed(${index})">
+                    <div>
+                        <strong>${feed.title || 'Без названия'}</strong><br>
+                        <small style="color: #718096;">${new URL(feed.url).hostname}</small>
+                    </div>
+                    <div class="feed-unread" id="unread-${index}">0</div>
+                </div>
+            `).join('');
+            
+            // Обновляем счётчики непрочитанных
+            updateUnreadCounts();
+        }
+        
+        // Добавление ленты
+        async function addFeed() {
+            const urlInput = document.getElementById('feed-url');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showError('Введите URL RSS ленты');
+                return;
+            }
+            
+            try {
+                showLoading();
+                
+                // Парсим ленту для проверки
+                const feedData = await parser.parseFeed(url);
+                
+                if (!feedData.items || feedData.items.length === 0) {
+                    throw new Error('Лента пуста или неверный формат');
+                }
+                
+                // Добавляем в список
+                feeds.push({
+                    url: url,
+                    title: feedData.channel?.title || new URL(url).hostname,
+                    description: feedData.channel?.description,
+                    added: new Date().toISOString(),
+                    lastRead: null,
+                    items: []
+                });
+                
+                // Сохраняем
+                saveSubscriptions();
+                renderFeedList();
+                
+                // Загружаем ленту
+                selectFeed(feeds.length - 1);
+                
+                // Очищаем поле
+                urlInput.value = '';
+                
+                showNotification('✅ Лента добавлена!');
+                
+            } catch (error) {
+                showError('Не удалось добавить ленту: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Автоопределение лент на сайте
+        async function discoverFeeds() {
+            const urlInput = document.getElementById('feed-url');
+            const siteUrl = urlInput.value.trim();
+            
+            if (!siteUrl) {
+                showError('Введите URL сайта');
+                return;
+            }
+            
+            try {
+                showLoading('🔍 Ищем RSS ленты...');
+                
+                const discoveredFeeds = await parser.discoverFeeds(siteUrl);
+                
+                if (discoveredFeeds.length === 0) {
+                    showNotification('На сайте не найдено RSS лент');
+                    return;
+                }
+                
+                // Показываем найденные ленты
+                const feedList = discoveredFeeds.map(feed => `
+                    <div style="
+                        background: #f7fafc;
+                        padding: 15px;
+                        margin: 10px 0;
+                        border-radius: 10px;
+                        border: 1px solid #e2e8f0;
+                    ">
+                        <strong>${feed.title}</strong><br>
+                        <small style="color: #718096;">${feed.url}</small><br>
+                        <button onclick="addDiscoveredFeed('${feed.url}')" style="
+                            background: #48bb78;
+                            color: white;
+                            border: none;
+                            padding: 5px 10px;
+                            border-radius: 5px;
+                            margin-top: 5px;
+                            cursor: pointer;
+                        ">
+                            Добавить
+                        </button>
+                    </div>
+                `).join('');
+                
+                document.getElementById('feed-content').innerHTML = `
+                    <div style="padding: 20px;">
+                        <h3>Найдено лент: ${discoveredFeeds.length}</h3>
+                        ${feedList}
+                        <button onclick="showMainView()" style="
+                            margin-top: 20px;
+                            background: #718096;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 10px;
+                            cursor: pointer;
+                        ">
+                            ← Назад
+                        </button>
+                    </div>
+                `;
+                
+            } catch (error) {
+                showError('Ошибка поиска лент: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Добавление найденной ленты
+        async function addDiscoveredFeed(url) {
+            document.getElementById('feed-url').value = url;
+            await addFeed();
+            showMainView();
+        }
+        
+        // Выбор ленты
+        async function selectFeed(index) {
+            currentFeed = index;
+            const feed = feeds[index];
+            
+            renderFeedList();
+            showLoading('Загружаем ленту...');
+            
+            try {
+                // Загружаем ленту
+                const feedData = await parser.parseFeed(feed.url);
+                
+                // Обновляем информацию о ленте
+                if (feedData.channel?.title && !feed.title) {
+                    feed.title = feedData.channel.title;
+                    saveSubscriptions();
+                    renderFeedList();
+                }
+                
+                // Отмечаем прочитанные
+                const readItems = JSON.parse(localStorage.getItem(`goose_rss_read_${feed.url}`) || '[]');
+                
+                // Отображаем записи
+                renderFeedItems(feedData.items, readItems);
+                
+                // Сохраняем время последнего чтения
+                feed.lastRead = new Date().toISOString();
+                saveSubscriptions();
+                
+            } catch (error) {
+                showError('Ошибка загрузки ленты: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Отображение записей ленты
+        function renderFeedItems(items, readItems) {
+            const readSet = new Set(readItems);
+            
+            const itemsHtml = items.map(item => {
+                const isRead = readSet.has(item.guid || item.link);
+                const pubDate = item.pubDate ? new Date(item.pubDate) : new Date();
+                
+                return `
+                    <div class="feed-item-card ${isRead ? '' : 'unread'}" id="item-${item.guid}">
+                        <h3 class="feed-item-title">
+                            <a href="${item.link}" target="_blank" onclick="markAsRead('${item.guid}', '${feeds[currentFeed].url}')">
+                                ${item.title || 'Без названия'}
+                            </a>
+                        </h3>
+                        
+                        <div class="feed-item-meta">
+                            <span class="feed-item-source">${feeds[currentFeed].title}</span>
+                            <span>${formatDate(pubDate)}</span>
+                            ${item.author ? `<span>👤 ${item.author}</span>` : ''}
+                        </div>
+                        
+                        ${item.description ? `
+                            <div class="feed-item-description">
+                                ${item.description.substring(0, 300)}${item.description.length > 300 ? '...' : ''}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="feed-item-actions">
+                            <button class="action-btn ${isRead ? '' : 'btn-read'}" 
+                                    onclick="toggleReadStatus('${item.guid}', '${feeds[currentFeed].url}', ${isRead})">
+                                ${isRead ? '📖 Не прочитано' : '✅ Прочитано'}
+                            </button>
+                            <button class="action-btn btn-save" onclick="saveItem('${item.guid}')">
+                                💾 Сохранить
+                            </button>
+                            <button class="action-btn btn-external" 
+                                    onclick="window.open('${item.link}', '_blank'); markAsRead('${item.guid}', '${feeds[currentFeed].url}')">
+                                🔗 Открыть
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('feed-content').innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <button onclick="showMainView()" style="
+                        background: none;
+                        border: none;
+                        color: #667eea;
+                        cursor: pointer;
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                    ">
+                        ← Все подписки
+                    </button>
+                    <h2>${feeds[currentFeed].title}</h2>
+                    <p style="color: #718096;">${items.length} записей</p>
+                </div>
+                ${itemsHtml}
+            `;
+        }
+        
+        // Показать главный экран
+        function showMainView() {
+            document.getElementById('feed-content').innerHTML = `
+                <div class="feed-empty">
+                    <h2>👋 Добро пожаловать!</h2>
+                    <p>Добавьте RSS ленту, чтобы начать читать.</p>
+                </div>
+            `;
+            currentFeed = null;
+            renderFeedList();
+        }
+        
+        // Отметка как прочитанное
+        function markAsRead(guid, feedUrl) {
+            const readItems = JSON.parse(localStorage.getItem(`goose_rss_read_${feedUrl}`) || '[]');
+            
+            if (!readItems.includes(guid)) {
+                readItems.push(guid);
+                localStorage.setItem(`goose_rss_read_${feedUrl}`, JSON.stringify(readItems));
+                
+                // Обновляем отображение
+                const itemElement = document.getElementById(`item-${guid}`);
+                if (itemElement) {
+                    itemElement.classList.remove('unread');
+                    const btn = itemElement.querySelector('.btn-read');
+                    if (btn) {
+                        btn.textContent = '📖 Не прочитано';
+                        btn.classList.remove('btn-read');
+                    }
+                }
+                
+                // Обновляем счётчики
+                updateUnreadCounts();
+            }
+        }
+        
+        // Переключение статуса прочитанности
+        function toggleReadStatus(guid, feedUrl, currentlyRead) {
+            const readItems = JSON.parse(localStorage.getItem(`goose_rss_read_${feedUrl}`) || '[]');
+            
+            if (currentlyRead) {
+                // Удаляем из прочитанных
+                const index = readItems.indexOf(guid);
+                if (index > -1) {
+                    readItems.splice(index, 1);
+                }
+            } else {
+                // Добавляем в прочитанные
+                if (!readItems.includes(guid)) {
+                    readItems.push(guid);
+                }
+            }
+            
+            localStorage.setItem(`goose_rss_read_${feedUrl}`, JSON.stringify(readItems));
+            
+            // Перезагружаем ленту
+            selectFeed(currentFeed);
+        }
+        
+        // Сохранение записи
+        function saveItem(guid) {
+            const savedItems = JSON.parse(localStorage.getItem('goose_rss_saved') || '[]');
+            
+            if (!savedItems.includes(guid)) {
+                savedItems.push(guid);
+                localStorage.setItem('goose_rss_saved', JSON.stringify(savedItems));
+                showNotification('✅ Запись сохранена!');
+            } else {
+                showNotification('ℹ️ Запись уже сохранена');
+            }
+        }
+        
+        // Обновление счётчиков непрочитанных
+        async function updateUnreadCounts() {
+            for (let i = 0; i < feeds.length; i++) {
+                const feed = feeds[i];
+                const readItems = JSON.parse(localStorage.getItem(`goose_rss_read_${feed.url}`) || '[]');
+                
+                try {
+                    // Загружаем ленту для подсчёта
+                    const feedData = await parser.parseFeed(feed.url);
+                    const totalItems = feedData.items?.length || 0;
+                    const unreadCount = totalItems - readItems.length;
+                    
+                    const counter = document.getElementById(`unread-${i}`);
+                    if (counter) {
+                        counter.textContent = Math.max(0, unreadCount);
+                        counter.style.display = unreadCount > 0 ? 'block' : 'none';
+                    }
+                } catch (error) {
+                    // Игнорируем ошибки при обновлении счётчиков
+                }
+            }
+        }
+        
+        // Примеры лент
+        function addExampleFeed(url) {
+            document.getElementById('feed-url').value = url;
+            addFeed();
+        }
+        
+        // Форматирование даты
+        function formatDate(date) {
+            const now = new Date();
+            const diff = now - date;
+            const diffHours = Math.floor(diff / (1000 * 60 * 60));
+            const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+            
+            if (diffHours < 24) {
+                return `${diffHours} ч. назад`;
+            } else if (diffDays < 7) {
+                return `${diffDays} дн. назад`;
+            } else {
+                return date.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'short'
+                });
+            }
+        }
+        
+        // Утилиты UI
+        function showLoading(message = 'Загрузка...') {
+            document.getElementById('feed-content').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+        
+        function hideLoading() {
+            // Автоматически скрывается при рендеринге контента
+        }
+        
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Загрузка при старте
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSubscriptions();
+            
+            // Автообновление каждые 5 минут
+            setInterval(() => {
+                updateUnreadCounts();
+            }, 5 * 60 * 1000);
+            
+            // Офлайн/онлайн отслеживание
+            window.addEventListener('online', () => {
+                showNotification('🌐 Вы в сети!');
+                updateUnreadCounts();
+            });
+            
+            window.addEventListener('offline', () => {
+                showNotification('📴 Вы в офлайне');
+            });
+        });
+    </script>
+</body>
+</html>
