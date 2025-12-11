@@ -936,7 +936,7 @@ function showSection(sectionId) {
             loadNotifications();
         }
     }
-}
+}/*
 
 // ======================
 // Модальное окно для подписок
@@ -1167,11 +1167,11 @@ function showNotification(message, type = 'info') {
             setTimeout(() => notification.remove(), 300);
         }
     }, 5000);
-}
+}*/
 
 // Добавьте в начало <style> в head:
-const notificationStyles = document.createElement('style');
-notificationStyles.textContent = `
+//const notificationStyles = document.createElement('style');
+/*notificationStyles.textContent = `
     @keyframes slideIn {
         from { transform: translateX(100%); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
@@ -1291,7 +1291,7 @@ notificationStyles.textContent = `
         color: #ff6b6b;
     }
 `;
-document.head.appendChild(notificationStyles);
+//document.head.appendChild(notificationStyles);
 
 // Обновите обработчики навигации в loadData():
 async function loadData() {
@@ -1310,7 +1310,7 @@ async function loadData() {
             }
         });
     });
-}
+}*/
         // Инициализация
         document.addEventListener('DOMContentLoaded', loadData);
     </script>
